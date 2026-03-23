@@ -1,0 +1,13 @@
+{
+  "configure": {
+    "main_port": 0,
+    "face_port": 1,
+    "face_cache_max_age_ms": 1200,
+    "max_status_lag_ms": 15000,
+    "min_face_person_overlap_ratio": 0.2
+  },
+  "shared_object": "../../build/lib/libface_track_matcher.so",
+  "name": "face_track_matcher",
+  "side": "sophgo",
+  "thread_number": 1
+}

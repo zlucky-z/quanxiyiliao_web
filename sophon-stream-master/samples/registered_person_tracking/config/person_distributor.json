@@ -1,0 +1,27 @@
+{
+  "configure": {
+    "default_port": 0,
+    "detected_crop_bottom_ratio": 0.45,
+    "detected_crop_left_ratio": 0.15,
+    "detected_crop_right_ratio": 0.85,
+    "detected_crop_top_ratio": -0.12,
+    "rules": [
+      {
+        "frame_interval": 1,
+        "routes": [
+          {
+            "classes": [
+              "person"
+            ],
+            "port": 1
+          }
+        ]
+      }
+    ],
+    "class_names_file": "../tripwire/data/coco.names"
+  },
+  "shared_object": "../../build/lib/libdistributor.so",
+  "name": "distributor",
+  "side": "sophgo",
+  "thread_number": 1
+}

@@ -1,0 +1,982 @@
+//===----------------------------------------------------------------------===//
+//
+// Copyright (C) 2022 Sophgo Technologies Inc.  All rights reserved.
+//
+// SOPHON-STREAM is licensed under the 2-Clause BSD License except for the
+// third-party components.
+//
+//===----------------------------------------------------------------------===//
+
+#include "distributor.h"
+
+#include <cmath>
+#include <chrono>
+#include <fstream>
+#include <nlohmann/json.hpp>
+
+#include "common/common_defs.h"
+#include "common/logger.h"
+#include "element_factory.h"
+
+namespace sophon_stream {
+namespace element {
+namespace distributor {
+
+namespace {
+double clampCropRatio(double value, double fallback) {
+  if (!std::isfinite(value)) {
+    return fallback;
+  }
+  if (value < -2.0) {
+    return -2.0;
+  }
+  if (value > 3.0) {
+    return 3.0;
+  }
+  return value;
+}
+}  // namespace
+
+Distributor::Distributor() {}
+Distributor::~Distributor() {}
+
+common::ErrorCode Distributor::initInternal(const std::string& json) {
+  common::ErrorCode errorCode = common::ErrorCode::SUCCESS;
+  do {
+    auto configure = nlohmann::json::parse(json, nullptr, false);
+    if (!configure.is_object()) {
+      errorCode = common::ErrorCode::PARSE_CONFIGURE_FAIL;
+      break;
+    }
+    int _default_port =
+        configure.find(CONFIG_INTERNAL_DEFAULT_PORT_FILED)->get<int>();
+    mDefaultPort = _default_port;
+
+    auto class_names_file =
+        configure.find(CONFIG_INTERNAL_CLASS_NAMES_FILES_FILED)
+            ->get<std::string>();
+    std::ifstream istream;
+    istream.open(class_names_file);
+    assert(istream.is_open());
+    std::string line;
+    while (std::getline(istream, line)) {
+      line = line.substr(0, line.length());
+      mClassNames.push_back(line);
+    }
+    istream.close();
+
+    auto is_affineIt = configure.find(CONFIG_INTERNAL_IS_AFFINE_FIELD);
+    if (is_affineIt != configure.end()) {
+      is_affine = is_affineIt->get<bool>();
+    } else {
+      is_affine = false;
+    }
+
+    auto cropLeftRatioIt =
+        configure.find(CONFIG_INTERNAL_DETECTED_CROP_LEFT_RATIO_FIELD);
+    if (cropLeftRatioIt != configure.end() && cropLeftRatioIt->is_number()) {
+      mDetectedCropLeftRatio = clampCropRatio(
+          cropLeftRatioIt->get<double>(), mDetectedCropLeftRatio);
+    }
+
+    auto cropTopRatioIt =
+        configure.find(CONFIG_INTERNAL_DETECTED_CROP_TOP_RATIO_FIELD);
+    if (cropTopRatioIt != configure.end() && cropTopRatioIt->is_number()) {
+      mDetectedCropTopRatio = clampCropRatio(
+          cropTopRatioIt->get<double>(), mDetectedCropTopRatio);
+    }
+
+    auto cropRightRatioIt =
+        configure.find(CONFIG_INTERNAL_DETECTED_CROP_RIGHT_RATIO_FIELD);
+    if (cropRightRatioIt != configure.end() && cropRightRatioIt->is_number()) {
+      mDetectedCropRightRatio = clampCropRatio(
+          cropRightRatioIt->get<double>(), mDetectedCropRightRatio);
+    }
+
+    auto cropBottomRatioIt =
+        configure.find(CONFIG_INTERNAL_DETECTED_CROP_BOTTOM_RATIO_FIELD);
+    if (cropBottomRatioIt != configure.end() && cropBottomRatioIt->is_number()) {
+      mDetectedCropBottomRatio = clampCropRatio(
+          cropBottomRatioIt->get<double>(), mDetectedCropBottomRatio);
+    }
+
+    if (mDetectedCropRightRatio <= mDetectedCropLeftRatio) {
+      mDetectedCropLeftRatio = 0.0;
+      mDetectedCropRightRatio = 1.0;
+    }
+    if (mDetectedCropBottomRatio <= mDetectedCropTopRatio) {
+      mDetectedCropTopRatio = 0.0;
+      mDetectedCropBottomRatio = 1.0;
+    }
+
+    auto rules = configure.find(CONFIG_INTERNAL_RULES_FILED);
+    for (auto& rule : *rules) {
+      auto routes = rule.find(CONFIG_INTERNAL_ROUTES_FILED);
+      auto time_interval_it = rule.find(CONFIG_INTERNAL_TIME_INTERVAL_FILED);
+      if (time_interval_it != rule.end() && time_interval_it->is_number()) {
+        float time_interval = time_interval_it->get<float>();
+        mTimeIntervals.push_back(time_interval);
+        for (auto& route : *routes) {
+          // 初始化当前interval下的每条路线
+          int port_id = route.find(CONFIG_INTERNAL_PORT_FILED)->get<int>();
+          std::vector<std::string> class_names_route =
+              route.find(CONFIG_INTERNAL_CLASS_NAMES_FILED)
+                  ->get<std::vector<std::string>>();
+          if (class_names_route.size() == 0) {
+            // 没有配置class_names，则认为是full frame
+            mTimeDistribRules[time_interval]["full_frame"] = port_id;
+          }
+          for (auto& class_name : class_names_route) {
+            mTimeDistribRules[time_interval][class_name] = port_id;
+          }
+        }
+      }
+      auto frame_interval_it = rule.find(CONFIG_INTERNAL_FRAME_INTERVAL_FILED);
+      if (frame_interval_it != rule.end() &&
+          frame_interval_it->is_number_integer()) {
+        int frame_interval = frame_interval_it->get<int>();
+        mFrameIntervals.push_back(frame_interval);
+        for (auto& route : *routes) {
+          // 初始化当前interval下的每条路线
+          int port_id = route.find(CONFIG_INTERNAL_PORT_FILED)->get<int>();
+          std::vector<std::string> class_names_route =
+              route.find(CONFIG_INTERNAL_CLASS_NAMES_FILED)
+                  ->get<std::vector<std::string>>();
+          if (class_names_route.size() == 0) {
+            // 没有配置class_names，则认为是full frame
+            mFrameDistribRules[frame_interval]["full_frame"] = port_id;
+          }
+          for (auto& class_name : class_names_route) {
+            mFrameDistribRules[frame_interval][class_name] = port_id;
+          }
+        }
+      }
+      if (time_interval_it == rule.end() && frame_interval_it == rule.end()) {
+        // 用户不配置time_interval和frame_interval，则视为对每一帧做分发，放在frame_interval相关规则里
+        int curFrameInterval = 1;
+        mFrameIntervals.push_back(curFrameInterval);
+        for (auto& route : *routes) {
+          // 初始化当前interval下的每条路线
+          int port_id = route.find(CONFIG_INTERNAL_PORT_FILED)->get<int>();
+          std::vector<std::string> class_names_route =
+              route.find(CONFIG_INTERNAL_CLASS_NAMES_FILED)
+                  ->get<std::vector<std::string>>();
+          if (class_names_route.size() == 0) {
+            // 没有配置class_names，则认为是full frame
+            mFrameDistribRules[curFrameInterval]["full_frame"] = port_id;
+          }
+          for (auto& class_name : class_names_route) {
+            mFrameDistribRules[curFrameInterval][class_name] = port_id;
+          }
+        }
+      }
+    }
+    if (mTimeIntervals.size() > 1) {
+      std::sort(mTimeIntervals.begin(), mTimeIntervals.end());
+      mTimeIntervals.erase(
+          std::unique(mTimeIntervals.begin(), mTimeIntervals.end()),
+          mTimeIntervals.end());
+    }
+    // mLastTimes = std::vector<float>(mTimeIntervals.size(), -99.0);
+    if (mFrameIntervals.size() > 1) {
+      std::sort(mFrameIntervals.begin(), mFrameIntervals.end());
+      mFrameIntervals.erase(
+          std::unique(mFrameIntervals.begin(), mFrameIntervals.end()),
+          mFrameIntervals.end());
+    }
+
+  } while (false);
+
+  clocker.reset();
+
+  return errorCode;
+}
+
+bool Distributor::makeSubObjectMetadata(
+    std::shared_ptr<common::ObjectMetadata> obj,
+    std::shared_ptr<common::DetectedObjectMetadata> detObj,
+    std::shared_ptr<common::ObjectMetadata> subObj, int subId) {
+  bmcv_rect_t rect;
+  if (obj == nullptr || obj->mFrame == nullptr || obj->mFrame->mSpData == nullptr) {
+    IVS_WARN("Skip sub object crop because frame is empty, element id: {0}",
+             getId());
+    return false;
+  }
+  if (detObj != nullptr) {
+    const double boxWidth = std::max(1, detObj->mBox.mWidth);
+    const double boxHeight = std::max(1, detObj->mBox.mHeight);
+    int x1 = detObj->mBox.mX +
+             static_cast<int>(std::floor(mDetectedCropLeftRatio * boxWidth));
+    int y1 = detObj->mBox.mY +
+             static_cast<int>(std::floor(mDetectedCropTopRatio * boxHeight));
+    int x2 = detObj->mBox.mX +
+             static_cast<int>(std::ceil(mDetectedCropRightRatio * boxWidth)) - 1;
+    int y2 = detObj->mBox.mY +
+             static_cast<int>(std::ceil(mDetectedCropBottomRatio * boxHeight)) - 1;
+    int points[4] = {x1, y1, x2, y2};
+    if (get_rect(rect, points, obj->mFrame->mWidth, obj->mFrame->mHeight) != 0) {
+      IVS_WARN(
+          "Skip invalid detected crop, element id: {0}, channel_id: {1}, frame_id: {2}, "
+          "box: [{3}, {4}, {5}, {6}]",
+          getId(), obj->mFrame->mChannelIdInternal,
+          static_cast<int>(obj->mFrame->mFrameId), x1, y1, x2, y2);
+      return false;
+    }
+  }
+
+  subObj->mFrame = std::make_shared<common::Frame>();
+  subObj->mParentTrackId = obj->mParentTrackId;
+  if (subId >= 0 &&
+      static_cast<size_t>(subId) < obj->mTrackedObjectMetadatas.size()) {
+    auto trackObj = obj->mTrackedObjectMetadatas[subId];
+    if (trackObj != nullptr && trackObj->mTrackId >= 0) {
+      subObj->mParentTrackId = trackObj->mTrackId;
+    }
+  }
+
+  // crop or not
+  if (detObj != nullptr) {
+    std::shared_ptr<bm_image> cropped = nullptr;
+    cropped.reset(new bm_image, [](bm_image* p) {
+      bm_image_destroy(*p);
+      delete p;
+      p = nullptr;
+    });
+    bm_status_t ret =
+        bm_image_create(obj->mFrame->mHandle, rect.crop_h, rect.crop_w,
+                        obj->mFrame->mSpData->image_format,
+                        obj->mFrame->mSpData->data_type, cropped.get());
+    if (ret != 0) {
+      IVS_WARN("bm_image_create failed for detected crop, element id: {0}, ret: {1}",
+               getId(), static_cast<int>(ret));
+      return false;
+    }
+    // #if BMCV_VERSION_MAJOR > 1
+    //     ret = bmcv_image_vpp_convert(obj->mFrame->mHandle, 1,
+    //     *obj->mFrame->mSpData,
+    //                                  cropped.get(), &rect);
+    // #else
+    ret = bmcv_image_crop(obj->mFrame->mHandle, 1, &rect, *obj->mFrame->mSpData,
+                          cropped.get());
+    // #endif
+    if (ret != 0) {
+      IVS_WARN("bmcv_image_crop failed for detected crop, element id: {0}, ret: {1}",
+               getId(), static_cast<int>(ret));
+      return false;
+    }
+
+    subObj->mFrame->mSpData = cropped;
+    subObj->mFrame->mHeight = rect.crop_h;
+    subObj->mFrame->mWidth = rect.crop_w;
+  } else {
+    subObj->mFrame->mSpData = obj->mFrame->mSpData;
+    subObj->mFrame->mHeight = obj->mFrame->mHeight;
+    subObj->mFrame->mWidth = obj->mFrame->mWidth;
+  }
+
+  // update frameid, channelid
+  subObj->mFrame->mFrameId = obj->mFrame->mFrameId;
+  subObj->mFrame->mSubFrameIdVec = obj->mFrame->mSubFrameIdVec;
+  subObj->mFrame->mSubFrameIdVec.push_back(
+      mSubFrameIdMap[obj->mFrame->mChannelId]);
+  subObj->mFrame->mTimestamp = obj->mFrame->mTimestamp;
+  subObj->mFrame->mFrameRate = obj->mFrame->mFrameRate;
+  subObj->mFrame->mFormatType = obj->mFrame->mFormatType;
+  subObj->mFrame->mDataType = obj->mFrame->mDataType;
+  subObj->mFrame->mSide = obj->mFrame->mSide;
+  subObj->mFrame->mChannelId = obj->mFrame->mChannelId;
+  subObj->mFrame->mChannelIdInternal = obj->mFrame->mChannelIdInternal;
+  subObj->mSubId = subId;
+  subObj->mFrame->mEndOfStream = obj->mFrame->mEndOfStream;
+  subObj->mFrame->mHandle = obj->mFrame->mHandle;
+  return true;
+}
+
+cv::Mat Distributor::estimateAffine2D(
+    const std::vector<cv::Point2f>& src_points,
+    const std::vector<cv::Point2f>& dst_points) {
+  if (src_points.size() != dst_points.size() || src_points.size() < 3) {
+    std::cerr << "Error: Invalid input points." << std::endl;
+    return cv::Mat();
+  }
+
+  cv::Mat A(src_points.size() * 2, 6, CV_32F);
+  cv::Mat B(src_points.size() * 2, 1, CV_32F);
+
+  for (size_t i = 0; i < src_points.size(); ++i) {
+    float x = src_points[i].x;
+    float y = src_points[i].y;
+    float u = dst_points[i].x;
+    float v = dst_points[i].y;
+
+    A.at<float>(i * 2, 0) = x;
+    A.at<float>(i * 2, 1) = y;
+    A.at<float>(i * 2, 2) = 1;
+    A.at<float>(i * 2, 3) = 0;
+    A.at<float>(i * 2, 4) = 0;
+    A.at<float>(i * 2, 5) = 0;
+
+    A.at<float>(i * 2 + 1, 0) = 0;
+    A.at<float>(i * 2 + 1, 1) = 0;
+    A.at<float>(i * 2 + 1, 2) = 0;
+    A.at<float>(i * 2 + 1, 3) = x;
+    A.at<float>(i * 2 + 1, 4) = y;
+    A.at<float>(i * 2 + 1, 5) = 1;
+
+    B.at<float>(i * 2) = u;
+    B.at<float>(i * 2 + 1) = v;
+  }
+
+  cv::Mat X;
+  cv::solve(A, B, X, cv::DECOMP_SVD);
+
+  cv::Mat M = (cv::Mat_<float>(2, 3) << X.at<float>(0), X.at<float>(1),
+               X.at<float>(2), X.at<float>(3), X.at<float>(4), X.at<float>(5));
+
+  return M.clone();
+}
+
+bool Distributor::makeSubFaceObjectMetadata(
+    std::shared_ptr<common::ObjectMetadata> obj,
+    std::shared_ptr<common::FaceObjectMetadata> faceObj,
+    std::shared_ptr<common::ObjectMetadata> subObj, int subId) {
+  bmcv_rect_t rect;
+  if (obj == nullptr || obj->mFrame == nullptr || obj->mFrame->mSpData == nullptr) {
+    IVS_WARN("Skip face crop because frame is empty, element id: {0}", getId());
+    return false;
+  }
+  if (faceObj != nullptr) {
+    rect.start_x = faceObj->left;
+    rect.start_y = faceObj->top;
+    rect.crop_w = faceObj->right - faceObj->left + 1;
+    rect.crop_h = faceObj->bottom - faceObj->top + 1;
+  }
+  subObj->mFrame = std::make_shared<common::Frame>();
+  subObj->mParentTrackId = obj->mParentTrackId;
+  // crop or not,faceObj != nullptr
+  if (faceObj != nullptr) {
+    int x1 = faceObj->left;
+    int y1 = faceObj->top;
+    int x2 = faceObj->right;
+    int y2 = faceObj->bottom;
+    bool use_affine = is_affine;
+
+    if (use_affine) {
+      std::vector<cv::Point2f> key_loc_ref = {
+          cv::Point2f(30.2946, 51.6963), cv::Point2f(65.5318, 51.6963),
+          cv::Point2f(48.0252, 71.7366), cv::Point2f(33.5493, 92.3655),
+          cv::Point2f(62.7299, 92.3655)};
+      // 外扩100%，防止对齐后人脸出现黑边
+      int new_x1 = int(1.50 * x1 - 0.50 * x2);
+      int new_x2 = int(1.50 * x2 - 0.50 * x1);
+      int new_y1 = int(1.50 * y1 - 0.50 * y2);
+      int new_y2 = int(1.50 * y2 - 0.50 * y1);
+
+      int points[4] = {new_x1, new_y1, new_x2, new_y2};
+      int res = get_rect(rect, points, obj->mFrame->mWidth, obj->mFrame->mHeight);
+      if (res != 0) {
+        IVS_WARN(
+            "Skip invalid affine face crop, element id: {0}, channel_id: {1}, "
+            "frame_id: {2}, box: [{3}, {4}, {5}, {6}]",
+            getId(), obj->mFrame->mChannelIdInternal,
+            static_cast<int>(obj->mFrame->mFrameId), new_x1, new_y1, new_x2,
+            new_y2);
+        return false;
+      }
+
+      bm_image corp_img;
+      bm_status_t ret =
+          bm_image_create(obj->mFrame->mHandle, rect.crop_h, rect.crop_w,
+                          obj->mFrame->mSpData->image_format,
+                          obj->mFrame->mSpData->data_type, &corp_img);
+      if (ret != 0) {
+        IVS_WARN("bm_image_create failed for affine face crop, element id: {0}, ret: {1}",
+                 getId(), static_cast<int>(ret));
+        return false;
+      }
+      ret = bmcv_image_crop(obj->mFrame->mHandle, 1, &rect,
+                            *obj->mFrame->mSpData, &corp_img);
+      if (ret != 0) {
+        IVS_WARN("bmcv_image_crop failed for affine face crop, element id: {0}, ret: {1}",
+                 getId(), static_cast<int>(ret));
+        bm_image_destroy(corp_img);
+        return false;
+      }
+
+      // 得到原始图中关键点
+      float left_eye_x = faceObj->points_x[0];
+      float left_eye_y = faceObj->points_y[0];
+      float right_eye_x = faceObj->points_x[1];
+      float right_eye_y = faceObj->points_y[1];
+      float nose_x = faceObj->points_x[2];
+      float nose_y = faceObj->points_y[2];
+      float left_mouth_x = faceObj->points_x[3];
+      float left_mouth_y = faceObj->points_y[3];
+      float right_mouth_x = faceObj->points_x[4];
+      float right_mouth_y = faceObj->points_y[4];
+
+      // 得到外扩100% 后图中关键点坐标(外扩的目的是为了防止对齐后出现黑边)
+      float new_left_eye_x = left_eye_x - new_x1;
+      float new_right_eye_x = right_eye_x - new_x1;
+      float new_nose_x = nose_x - new_x1;
+      float new_left_mouth_x = left_mouth_x - new_x1;
+      float new_right_mouth_x = right_mouth_x - new_x1;
+      float new_left_eye_y = left_eye_y - new_y1;
+      float new_right_eye_y = right_eye_y - new_y1;
+      float new_nose_y = nose_y - new_y1;
+      float new_left_mouth_y = left_mouth_y - new_y1;
+      float new_right_mouth_y = right_mouth_y - new_y1;
+
+      std::vector<cv::Point2f> key_loc = {
+          cv::Point2f(new_left_eye_x, new_left_eye_y),
+          cv::Point2f(new_right_eye_x, new_right_eye_y),
+          cv::Point2f(new_nose_x, new_nose_y),
+          cv::Point2f(new_left_mouth_x, new_left_mouth_y),
+          cv::Point2f(new_right_mouth_x, new_right_mouth_y)};
+
+      cv::Mat affine_matrix = estimateAffine2D(key_loc, key_loc_ref);
+
+      bmcv_warp_matrix warp_matrix;
+      bmcv_affine_image_matrix matrix = {&warp_matrix, 1};
+
+      matrix.matrix->m[0] = affine_matrix.at<float>(0, 0);
+      matrix.matrix->m[1] = affine_matrix.at<float>(0, 1);
+      matrix.matrix->m[2] = affine_matrix.at<float>(0, 2);
+      matrix.matrix->m[3] = affine_matrix.at<float>(1, 0);
+      matrix.matrix->m[4] = affine_matrix.at<float>(1, 1);
+      matrix.matrix->m[5] = affine_matrix.at<float>(1, 2);
+
+      std::shared_ptr<bm_image> affine_image_ptr = nullptr;
+      affine_image_ptr.reset(new bm_image, [](bm_image* p) {
+        bm_image_destroy(*p);
+        delete p;
+        p = nullptr;
+      });
+
+      bm_image planar_image;
+      ret = bm_image_create(obj->mFrame->mHandle, corp_img.height,
+                            corp_img.width, FORMAT_BGR_PLANAR,
+                            DATA_TYPE_EXT_1N_BYTE, &planar_image);
+      if (ret != 0) {
+        IVS_WARN("bm_image_create failed for planar face image, element id: {0}, ret: {1}",
+                 getId(), static_cast<int>(ret));
+        bm_image_destroy(corp_img);
+        return false;
+      }
+      ret = bmcv_image_storage_convert(obj->mFrame->mHandle, 1, &corp_img,
+                                       &planar_image);
+      if (ret != 0) {
+        IVS_WARN(
+            "bmcv_image_storage_convert failed for face image, element id: {0}, ret: {1}",
+            getId(), static_cast<int>(ret));
+        bm_image_destroy(planar_image);
+        bm_image_destroy(corp_img);
+        return false;
+      }
+
+      ret = bm_image_create(obj->mFrame->mHandle, planar_image.height,
+                            planar_image.width, planar_image.image_format,
+                            planar_image.data_type, affine_image_ptr.get());
+      if (ret != 0) {
+        IVS_WARN("bm_image_create failed for affine output, element id: {0}, ret: {1}",
+                 getId(), static_cast<int>(ret));
+        bm_image_destroy(planar_image);
+        bm_image_destroy(corp_img);
+        return false;
+      }
+      ret = bmcv_image_warp_affine_similar_to_opencv(obj->mFrame->mHandle, 1,
+                                                     &matrix, &planar_image,
+                                                     affine_image_ptr.get(), 0);
+      if (ret != 0) {
+        IVS_WARN("bmcv_image_warp_affine failed, element id: {0}, ret: {1}",
+                 getId(), static_cast<int>(ret));
+        bm_image_destroy(planar_image);
+        bm_image_destroy(corp_img);
+        return false;
+      }
+
+      bmcv_rect_t rect_after_warp;
+      rect_after_warp.start_x = 0;
+      rect_after_warp.start_y = 0;
+      rect_after_warp.crop_w = 100;
+      rect_after_warp.crop_h = 120;
+      std::shared_ptr<bm_image> crop_after_warp = nullptr;
+      crop_after_warp.reset(new bm_image, [](bm_image* p) {
+        bm_image_destroy(*p);
+        delete p;
+        p = nullptr;
+      });
+      ret = bm_image_create(obj->mFrame->mHandle, rect_after_warp.crop_w,
+                            rect_after_warp.crop_h, FORMAT_BGR_PLANAR,
+                            DATA_TYPE_EXT_1N_BYTE, crop_after_warp.get());
+      if (ret != 0) {
+        IVS_WARN("bm_image_create failed for post-warp face crop, element id: {0}, ret: {1}",
+                 getId(), static_cast<int>(ret));
+        bm_image_destroy(planar_image);
+        bm_image_destroy(corp_img);
+        return false;
+      }
+
+      if (corp_img.width < rect_after_warp.crop_w ||
+          corp_img.height < rect_after_warp.crop_h) {
+        bmcv_rect_t crop_rect = {0, 0, corp_img.width, corp_img.height};
+        ret = bmcv_image_vpp_convert(obj->mFrame->mHandle, 1, *affine_image_ptr,
+                                     crop_after_warp.get(), &crop_rect,
+                                     BMCV_INTER_LINEAR);
+      } else {
+        ret = bmcv_image_crop(obj->mFrame->mHandle, 1, &rect_after_warp,
+                              *affine_image_ptr, crop_after_warp.get());
+      }
+      if (ret != 0) {
+        IVS_WARN("Post-warp face crop failed, element id: {0}, ret: {1}",
+                 getId(), static_cast<int>(ret));
+        bm_image_destroy(planar_image);
+        bm_image_destroy(corp_img);
+        return false;
+      }
+
+      subObj->mFrame->mSpData = crop_after_warp;
+      subObj->mFrame->mWidth = rect_after_warp.crop_w;
+      subObj->mFrame->mHeight = rect_after_warp.crop_h;
+      bm_image_destroy(planar_image);
+      bm_image_destroy(corp_img);
+    } else {
+      int points[4] = {x1, y1, x2, y2};
+      int res = get_rect(rect, points, obj->mFrame->mWidth, obj->mFrame->mHeight);
+      if (res != 0) {
+        IVS_WARN(
+            "Skip invalid face crop, element id: {0}, channel_id: {1}, frame_id: {2}, "
+            "box: [{3}, {4}, {5}, {6}]",
+            getId(), obj->mFrame->mChannelIdInternal,
+            static_cast<int>(obj->mFrame->mFrameId), x1, y1, x2, y2);
+        return false;
+      }
+
+      std::shared_ptr<bm_image> cropped = nullptr;
+      cropped.reset(new bm_image, [](bm_image* p) {
+        bm_image_destroy(*p);
+        delete p;
+        p = nullptr;
+      });
+      bm_status_t ret = bm_image_create(obj->mFrame->mHandle, rect.crop_h,
+                                        rect.crop_w, FORMAT_BGR_PLANAR,
+                                        DATA_TYPE_EXT_1N_BYTE, cropped.get());
+      if (ret != 0) {
+        IVS_WARN("bm_image_create failed for face crop, element id: {0}, ret: {1}",
+                 getId(), static_cast<int>(ret));
+        return false;
+      }
+      ret = bmcv_image_crop(obj->mFrame->mHandle, 1, &rect,
+                            *obj->mFrame->mSpData, cropped.get());
+      if (ret != 0) {
+        IVS_WARN("bmcv_image_crop failed for face crop, element id: {0}, ret: {1}",
+                 getId(), static_cast<int>(ret));
+        return false;
+      }
+      subObj->mFrame->mSpData = cropped;
+      subObj->mFrame->mWidth = rect.crop_w;
+      subObj->mFrame->mHeight = rect.crop_h;
+    }
+
+  } else {
+    subObj->mFrame->mSpData = obj->mFrame->mSpData;
+    subObj->mFrame->mWidth = obj->mFrame->mWidth;
+    subObj->mFrame->mHeight = obj->mFrame->mHeight;
+  }
+
+  // update frameid, channelid
+  subObj->mFrame->mFrameId = obj->mFrame->mFrameId;
+  subObj->mFrame->mSubFrameIdVec = obj->mFrame->mSubFrameIdVec;
+  subObj->mFrame->mSubFrameIdVec.push_back(
+      mSubFrameIdMap[obj->mFrame->mChannelId]);
+  subObj->mFrame->mTimestamp = obj->mFrame->mTimestamp;
+  subObj->mFrame->mFrameRate = obj->mFrame->mFrameRate;
+  subObj->mFrame->mFormatType = obj->mFrame->mFormatType;
+  subObj->mFrame->mDataType = obj->mFrame->mDataType;
+  subObj->mFrame->mSide = obj->mFrame->mSide;
+  subObj->mFrame->mChannelId = obj->mFrame->mChannelId;
+  subObj->mFrame->mChannelIdInternal = obj->mFrame->mChannelIdInternal;
+  subObj->mSubId = subId;
+  subObj->mFrame->mEndOfStream = obj->mFrame->mEndOfStream;
+  subObj->mFrame->mHandle = obj->mFrame->mHandle;
+  return true;
+}
+
+void Distributor::makeSubOcrObjectMetadata(
+    std::shared_ptr<common::ObjectMetadata> obj,
+    std::shared_ptr<common::DetectedObjectMetadata> detObj,
+    std::shared_ptr<common::ObjectMetadata> subObj, int subId) {
+  std::vector<std::vector<int>> box;
+  if (detObj != nullptr) {
+    for (auto keyPoint : detObj->mKeyPoints) {
+      box.push_back({keyPoint->mPoint.mX, keyPoint->mPoint.mY});
+    }
+  }
+
+  subObj->mFrame = std::make_shared<common::Frame>();
+  subObj->mParentTrackId = obj->mParentTrackId;
+
+  // crop or not
+  if (detObj != nullptr) {
+    bm_image input_bmimg_planar;
+    bm_status_t ret =
+        bm_image_create(obj->mFrame->mHandle, obj->mFrame->mSpData->height,
+                        obj->mFrame->mSpData->width, FORMAT_BGR_PLANAR,
+                        obj->mFrame->mSpData->data_type, &input_bmimg_planar);
+    ret = bmcv_image_vpp_convert(obj->mFrame->mHandle, 1,
+                                 *obj->mFrame->mSpData.get(),
+                                 &input_bmimg_planar);
+
+    std::shared_ptr<bm_image> cropped = nullptr;
+    cropped.reset(new bm_image, [](bm_image* p) {
+      bm_image_destroy(*p);
+      delete p;
+      p = nullptr;
+    });
+
+    bm_image crop_image =
+        get_rotate_crop_image(obj->mFrame->mHandle, input_bmimg_planar, box);
+
+    *cropped.get() = crop_image;
+
+    subObj->mFrame->mSpData = cropped;
+    bm_image_destroy(input_bmimg_planar);
+  } else {
+    subObj->mFrame->mSpData = obj->mFrame->mSpData;
+  }
+
+  // update frameid, channelid
+  subObj->mFrame->mFrameId = obj->mFrame->mFrameId;
+  subObj->mFrame->mSubFrameIdVec = obj->mFrame->mSubFrameIdVec;
+  subObj->mFrame->mSubFrameIdVec.push_back(
+      mSubFrameIdMap[obj->mFrame->mChannelId]);
+  subObj->mFrame->mTimestamp = obj->mFrame->mTimestamp;
+  subObj->mFrame->mFrameRate = obj->mFrame->mFrameRate;
+  subObj->mFrame->mFormatType = obj->mFrame->mFormatType;
+  subObj->mFrame->mDataType = obj->mFrame->mDataType;
+  subObj->mFrame->mSide = obj->mFrame->mSide;
+  subObj->mFrame->mChannelId = obj->mFrame->mChannelId;
+  subObj->mFrame->mChannelIdInternal = obj->mFrame->mChannelIdInternal;
+  subObj->mSubId = subId;
+  subObj->mFrame->mEndOfStream = obj->mFrame->mEndOfStream;
+}
+
+bm_image Distributor::get_rotate_crop_image(bm_handle_t handle,
+                                            bm_image input_bmimg_planar,
+                                            std::vector<std::vector<int>> box) {
+  int crop_width = std::max(
+      (int)sqrt(pow(box[0][0] - box[1][0], 2) + pow(box[0][1] - box[1][1], 2)),
+      (int)sqrt(pow(box[2][0] - box[3][0], 2) + pow(box[2][1] - box[3][1], 2)));
+  int crop_height = std::max(
+      (int)sqrt(pow(box[0][0] - box[3][0], 2) + pow(box[0][1] - box[3][1], 2)),
+      (int)sqrt(pow(box[2][0] - box[1][0], 2) + pow(box[2][1] - box[1][1], 2)));
+  // legality bounding
+  crop_width = std::min(std::max(16, crop_width), input_bmimg_planar.width);
+  crop_height = std::min(std::max(16, crop_height), input_bmimg_planar.height);
+
+  bmcv_perspective_image_coordinate coord;
+  coord.coordinate_num = 1;
+  std::shared_ptr<bmcv_perspective_coordinate> coord_data =
+      std::make_shared<bmcv_perspective_coordinate>();
+  coord.coordinate = coord_data.get();
+  coord.coordinate->x[0] = box[0][0];
+  coord.coordinate->y[0] = box[0][1];
+  coord.coordinate->x[1] = box[1][0];
+  coord.coordinate->y[1] = box[1][1];
+  coord.coordinate->x[2] = box[3][0];
+  coord.coordinate->y[2] = box[3][1];
+  coord.coordinate->x[3] = box[2][0];
+  coord.coordinate->y[3] = box[2][1];
+
+  bm_image crop_bmimg;
+  bm_image_create(handle, crop_height, crop_width,
+                  input_bmimg_planar.image_format, input_bmimg_planar.data_type,
+                  &crop_bmimg);
+  auto ret = bmcv_image_warp_perspective_with_coordinate(
+      handle, 1, &coord, &input_bmimg_planar, &crop_bmimg, 0);
+  STREAM_CHECK(ret == 0,
+               "bmcv_image_warp_perspective_with_coordinate Failed! Program "
+               "Terminated.");
+
+  if ((float)crop_height / crop_width < 1.5) {
+    return crop_bmimg;
+  } else {
+    bm_image rot_bmimg;
+    bm_image_create(handle, crop_width, crop_height,
+                    input_bmimg_planar.image_format,
+                    input_bmimg_planar.data_type, &rot_bmimg);
+
+    cv::Point2f center = cv::Point2f(crop_width / 2.0, crop_height / 2.0);
+    cv::Mat rot_mat = cv::getRotationMatrix2D(center, -90.0, 1.0);
+    bmcv_affine_image_matrix matrix_image;
+    matrix_image.matrix_num = 1;
+    std::shared_ptr<bmcv_affine_matrix> matrix_data =
+        std::make_shared<bmcv_affine_matrix>();
+    matrix_image.matrix = matrix_data.get();
+    matrix_image.matrix->m[0] = rot_mat.at<double>(0, 0);
+    matrix_image.matrix->m[1] = rot_mat.at<double>(0, 1);
+    matrix_image.matrix->m[2] =
+        rot_mat.at<double>(0, 2) - crop_height / 2.0 + crop_width / 2.0;
+    matrix_image.matrix->m[3] = rot_mat.at<double>(1, 0);
+    matrix_image.matrix->m[4] = rot_mat.at<double>(1, 1);
+    matrix_image.matrix->m[5] =
+        rot_mat.at<double>(1, 2) - crop_height / 2.0 + crop_width / 2.0;
+
+    auto ret = bmcv_image_warp_affine(handle, 1, &matrix_image, &crop_bmimg,
+                                      &rot_bmimg, 0);
+    STREAM_CHECK(ret == 0,
+                 "bmcv_image_warp_affine Failed. Program Terminated.");
+    bm_image_destroy(crop_bmimg);
+    return rot_bmimg;
+  }
+}
+
+int Distributor::get_rect(bmcv_rect_t& rect, int* points, int frame_width, int frame_height){
+    // BM1688/CV186有VPSS_MIN_H和VPSS_MIN_W等于16，BM1684X有VPP1684X_MIN_W和VPP1684X_MIN_H等于8
+#if BMCV_VERSION_MAJOR > 1
+    int min_w = 16, min_h = 16;
+#else
+    int min_w = 8, min_h = 8;
+#endif
+    int ret = 0;
+    if (frame_width < min_w || frame_height < min_h){
+        ret = 1; // 原图太小
+        return ret;
+    }
+    // points = {x1, y1, x2, y2}
+    // 初始化起点，确保大于零且小于图片尺寸
+    int start_x = std::max(std::min(points[0],frame_width ),0);
+    int start_y = std::max(std::min(points[1],frame_height),0);
+    // 初始化宽高, 确保大于最小值且小于图片尺寸
+    int crop_w  = std::max(std::min(points[2] - points[0], frame_width ),min_w);
+    int crop_h  = std::max(std::min(points[3] - points[1], frame_height),min_h);
+    // 检测裁剪框宽度与原图大小
+    if (start_x + crop_w > frame_width){
+        // 先看能否缩小crop_w，不行就减小start_x
+        if (frame_width - start_x >= min_w){
+            crop_w = frame_width - start_x;
+        } else {
+            // 前面已确认frame_width >= crop_w
+            start_x = frame_width - crop_w;
+        }
+    }
+    if (start_y + crop_h > frame_height){
+        // 先看能否缩小crop_h，不行就减小start_y
+        if (frame_height - start_y >= min_h){
+            crop_h = frame_height - start_y;
+        } else {
+            // 前面已确认frame_height >= crop_h
+            start_y = frame_height - crop_h;
+        }
+    }
+    rect.start_x = start_x;
+    rect.start_y = start_y;
+    rect.crop_w  = crop_w;
+    rect.crop_h  = crop_h;
+    return ret;
+}
+
+common::ErrorCode Distributor::doWork(int dataPipeId) {
+  common::ErrorCode errorCode = common::ErrorCode::SUCCESS;
+  // 从队列中取出一个数据，判断detection结果，如果需要发送到下游，则做crop并且发送
+  std::vector<int> inputPorts = getInputPorts();
+  if (inputPorts.empty()) {
+    IVS_ERROR("Distributor has no input ports, element id: {0}", getId());
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    return common::ErrorCode::NO_SUCH_WORKER_PORT;
+  }
+  int inputPort = inputPorts[0];
+
+  auto data = popInputData(inputPort, dataPipeId);
+  while (!data && (getThreadStatus() == ThreadStatus::RUN)) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    data = popInputData(inputPort, dataPipeId);
+  }
+  if (data == nullptr) return common::ErrorCode::SUCCESS;
+
+  auto objectMetadata = std::static_pointer_cast<common::ObjectMetadata>(data);
+  if (objectMetadata == nullptr || objectMetadata->mFrame == nullptr) {
+    IVS_WARN("Distributor got empty object metadata, element id: {0}", getId());
+    return common::ErrorCode::SUCCESS;
+  }
+
+  // 先把ObjectMetadata发给默认的汇聚节点
+  int channel_id_internal = objectMetadata->mFrame->mChannelIdInternal;
+  int outDataPipeId =
+      channel_id_internal % getOutputConnectorCapacity(mDefaultPort);
+
+  if (mChannelLastTimes.find(channel_id_internal) == mChannelLastTimes.end()) {
+    mChannelLastTimes[channel_id_internal] =
+        std::vector<float>(mTimeIntervals.size(), -99.0);
+  }
+  // 判断计时器规则
+  float cur_time = clocker.tell_ms() / 1000.0;
+  int subId = 0;
+  std::unordered_map<std::string, std::unordered_set<int>> class2ports;
+  for (int i = 0; i < mChannelLastTimes[channel_id_internal].size(); ++i) {
+    if (cur_time - mChannelLastTimes[channel_id_internal][i] >
+            mTimeIntervals[i] ||
+        objectMetadata->mFrame->mEndOfStream) {
+      // IVS_DEBUG("meet time interval rules, frame id = {0}",
+      // objectMetadata->mFrame->mFrameId);
+      mChannelLastTimes[channel_id_internal][i] = cur_time;
+      for (auto class_port_it = mTimeDistribRules[mTimeIntervals[i]].begin();
+           class_port_it != mTimeDistribRules[mTimeIntervals[i]].end();
+           ++class_port_it) {
+        class2ports[class_port_it->first].insert(class_port_it->second);
+      }
+    }
+  }
+  // 判断跳帧规则
+  for (int i = 0; i < mFrameIntervals.size(); ++i) {
+    if (objectMetadata->mFrame->mFrameId % mFrameIntervals[i] == 0 ||
+        objectMetadata->mFrame->mEndOfStream) {
+      for (auto class_port_it = mFrameDistribRules[mFrameIntervals[i]].begin();
+           class_port_it != mFrameDistribRules[mFrameIntervals[i]].end();
+           ++class_port_it) {
+        class2ports[class_port_it->first].insert(class_port_it->second);
+      }
+    }
+  }
+
+  if (class2ports.size() > 0) {
+    auto dispatchSubObject =
+        [&](int targetPort, const std::shared_ptr<common::ObjectMetadata>& subObj,
+            int currentSubId) -> common::ErrorCode {
+      int branchDataPipeId =
+          channel_id_internal % getOutputConnectorCapacity(targetPort);
+      common::ErrorCode pushCode =
+          pushOutputData(targetPort, branchDataPipeId,
+                         std::static_pointer_cast<void>(subObj));
+      if (pushCode == common::ErrorCode::SUCCESS) {
+        objectMetadata->mSubObjectMetadatas.push_back(subObj);
+        ++objectMetadata->numBranches;
+        IVS_DEBUG(
+            "Sub ObjectMetadata is sent to branch, channel_id = {0}, "
+            "frame_id = {1}, subId = {2}",
+            channel_id_internal, subObj->mFrame->mFrameId, currentSubId);
+      } else {
+        IVS_WARN(
+            "Drop sub object to keep pipeline moving, element id: {0:d}, "
+            "output port: {1:d}, channel_id: {2:d}, frame_id: {3:d}, subId: {4:d}",
+            getId(), targetPort, channel_id_internal,
+            static_cast<int>(subObj->mFrame->mFrameId), currentSubId);
+      }
+      return pushCode;
+    };
+
+    if (objectMetadata->mFrame->mEndOfStream) {
+      std::vector<int> outputPorts = getOutputPorts();
+      for (auto outPort : outputPorts) {
+        if (outPort == mDefaultPort) continue;
+        std::shared_ptr<common::ObjectMetadata> subObj =
+            std::make_shared<common::ObjectMetadata>();
+        if (!makeSubObjectMetadata(objectMetadata, nullptr, subObj, subId)) {
+          continue;
+        }
+        errorCode = dispatchSubObject(outPort, subObj, subId);
+      }
+      ++subId;
+      ++mSubFrameIdMap[objectMetadata->mFrame->mChannelId];
+    }
+
+    for (auto faceObj : objectMetadata->mFaceObjectMetadatas) {
+      if (faceObj == nullptr) {
+        ++subId;
+        ++mSubFrameIdMap[objectMetadata->mFrame->mChannelId];
+        continue;
+      }
+      int class_id = 0;
+      if (class_id < 0 || class_id >= static_cast<int>(mClassNames.size())) {
+        IVS_WARN("Face class id out of range, element id: {0}, class_id: {1}",
+                 getId(), class_id);
+        ++subId;
+        ++mSubFrameIdMap[objectMetadata->mFrame->mChannelId];
+        continue;
+      }
+      std::string class_name = mClassNames[class_id];
+      if (class2ports.find(class_name) != class2ports.end()) {
+        for (auto port_it = class2ports[class_name].begin();
+             port_it != class2ports[class_name].end(); ++port_it) {
+          int target_port = *port_it;
+          // 构造SubObjectMetadata
+          std::shared_ptr<common::ObjectMetadata> subObj =
+              std::make_shared<common::ObjectMetadata>();
+          if (!makeSubFaceObjectMetadata(objectMetadata, faceObj, subObj, subId)) {
+            continue;
+          }
+          errorCode = dispatchSubObject(target_port, subObj, subId);
+        }
+      }
+      ++subId;
+      ++mSubFrameIdMap[objectMetadata->mFrame->mChannelId];
+    }
+
+    for (auto detObj : objectMetadata->mDetectedObjectMetadatas) {
+      if (detObj == nullptr) {
+        ++subId;
+        ++mSubFrameIdMap[objectMetadata->mFrame->mChannelId];
+        continue;
+      }
+      int class_id = detObj->mClassify;
+      if (class_id < 0 || class_id >= static_cast<int>(mClassNames.size())) {
+        IVS_WARN("Detected class id out of range, element id: {0}, class_id: {1}",
+                 getId(), class_id);
+        ++subId;
+        ++mSubFrameIdMap[objectMetadata->mFrame->mChannelId];
+        continue;
+      }
+      std::string class_name = mClassNames[class_id];
+      if (class2ports.find(class_name) != class2ports.end()) {
+        for (auto port_it = class2ports[class_name].begin();
+             port_it != class2ports[class_name].end(); ++port_it) {
+          int target_port = *port_it;
+          // 构造SubObjectMetadata
+          std::shared_ptr<common::ObjectMetadata> subObj =
+              std::make_shared<common::ObjectMetadata>();
+
+          if (class_name == "ppocr") {
+            makeSubOcrObjectMetadata(objectMetadata, detObj, subObj, subId);
+          } else {
+            if (!makeSubObjectMetadata(objectMetadata, detObj, subObj, subId)) {
+              continue;
+            }
+          }
+          errorCode = dispatchSubObject(target_port, subObj, subId);
+        }
+      }
+      ++subId;
+      ++mSubFrameIdMap[objectMetadata->mFrame->mChannelId];
+    }
+
+    if (class2ports.find("full_frame") != class2ports.end()) {
+      for (auto port_it = class2ports["full_frame"].begin();
+           port_it != class2ports["full_frame"].end(); ++port_it) {
+        // full_frame 分发，也是构造一个新的SubObjectMetadata
+        std::shared_ptr<common::ObjectMetadata> subObj =
+            std::make_shared<common::ObjectMetadata>();
+        if (!makeSubObjectMetadata(objectMetadata, nullptr, subObj, -1)) {
+          continue;
+        }
+        int target_port = *port_it;
+        errorCode = dispatchSubObject(target_port, subObj, -1);
+      }
+    }
+  }
+
+  errorCode = pushOutputData(mDefaultPort, outDataPipeId, data);
+  IVS_DEBUG(
+      "Main ObjectMetadata is sent to Converger, channel_id = {0}, frame_id "
+      "= "
+      "{1}, numBranches = {2}",
+      channel_id_internal, objectMetadata->mFrame->mFrameId,
+      objectMetadata->numBranches);
+
+  return errorCode;
+}
+
+REGISTER_WORKER("distributor", Distributor)
+
+}  // namespace distributor
+}  // namespace element
+}  // namespace sophon_stream

@@ -1,0 +1,14 @@
+{
+  "channels": [
+    {
+      "channel_id": 0,
+      "fps": 10,
+      "loop_num": 1,
+      "sample_interval": 2,
+      "sample_strategy": "DROP",
+      "source_type": "RTSP",
+      "url": "rtsp://127.0.0.1:8554/placeholder"
+    }
+  ],
+  "engine_config_path": "../registered_person_tracking/config/engine_group.json"
+}

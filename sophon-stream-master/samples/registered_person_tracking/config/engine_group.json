@@ -1,0 +1,191 @@
+[
+  {
+    "graph_id": 0,
+    "device_id": 0,
+    "graph_name": "registered_person_tracking",
+    "elements": [
+      {
+        "element_id": 5000,
+        "element_config": "../tripwire/config/decode.json",
+        "ports": {
+          "input": [
+            {
+              "port_id": 0,
+              "is_sink": false,
+              "is_src": true
+            }
+          ]
+        }
+      },
+      {
+        "element_id": 5001,
+        "element_config": "../tripwire/config/yolox_group.json",
+        "inner_elements_id": [
+          10001,
+          10002,
+          10003
+        ]
+      },
+      {
+        "element_id": 5002,
+        "element_config": "../tripwire/config/bytetrack.json"
+      },
+      {
+        "element_id": 5015,
+        "element_config": "../registered_person_tracking/config/track_status_attach.json"
+      },
+      {
+        "element_id": 5022,
+        "element_config": "../retinaface_distributor_resnet_faiss_converger/config/distributor_frame.json"
+      },
+      {
+        "element_id": 5016,
+        "element_config": "../retinaface_distributor_resnet_faiss_converger/config/retinaface_group.json",
+        "inner_elements_id": [
+          12001,
+          12002,
+          12003
+        ]
+      },
+      {
+        "element_id": 5023,
+        "element_config": "../registered_person_tracking/config/face_track_matcher.json"
+      },
+      {
+        "element_id": 5017,
+        "element_config": "../registered_person_tracking/config/face_distributor.json"
+      },
+      {
+        "element_id": 5018,
+        "element_config": "../retinaface_distributor_resnet_faiss_converger/config/resnet_face.json"
+      },
+      {
+        "element_id": 5019,
+        "element_config": "../retinaface_distributor_resnet_faiss_converger/config/faiss.json"
+      },
+      {
+        "element_id": 5020,
+        "element_config": "../registered_person_tracking/config/face_converger.json"
+      },
+      {
+        "element_id": 5021,
+        "element_config": "../registered_person_tracking/config/face_debug_osd.json"
+      },
+      {
+        "element_id": 5012,
+        "element_config": "../registered_person_tracking/config/track_osd.json"
+      },
+      {
+        "element_id": 5014,
+        "element_config": "../registered_person_tracking/config/encode.json",
+        "ports": {
+          "output": [
+            {
+              "port_id": 0,
+              "is_sink": true,
+              "is_src": false
+            }
+          ]
+        }
+      }
+    ],
+    "connections": [
+      {
+        "src_element_id": 5000,
+        "src_port": 0,
+        "dst_element_id": 5022,
+        "dst_port": 0
+      },
+      {
+        "src_element_id": 5022,
+        "src_port": 0,
+        "dst_element_id": 5001,
+        "dst_port": 0
+      },
+      {
+        "src_element_id": 5001,
+        "src_port": 0,
+        "dst_element_id": 5002,
+        "dst_port": 0
+      },
+      {
+        "src_element_id": 5022,
+        "src_port": 1,
+        "dst_element_id": 5016,
+        "dst_port": 0
+      },
+      {
+        "src_element_id": 5002,
+        "src_port": 0,
+        "dst_element_id": 5023,
+        "dst_port": 0
+      },
+      {
+        "src_element_id": 5016,
+        "src_port": 0,
+        "dst_element_id": 5023,
+        "dst_port": 1
+      },
+      {
+        "src_element_id": 5023,
+        "src_port": 0,
+        "dst_element_id": 5017,
+        "dst_port": 0
+      },
+      {
+        "src_element_id": 5017,
+        "src_port": 0,
+        "dst_element_id": 5020,
+        "dst_port": 0
+      },
+      {
+        "src_element_id": 5017,
+        "src_port": 1,
+        "dst_element_id": 5018,
+        "dst_port": 0
+      },
+      {
+        "src_element_id": 5018,
+        "src_port": 0,
+        "dst_element_id": 5019,
+        "dst_port": 0
+      },
+      {
+        "src_element_id": 5019,
+        "src_port": 0,
+        "dst_element_id": 5020,
+        "dst_port": 1
+      },
+      {
+        "src_element_id": 5002,
+        "src_port": 0,
+        "dst_element_id": 5015,
+        "dst_port": 0
+      },
+      {
+        "src_element_id": 5020,
+        "src_port": 0,
+        "dst_element_id": 5015,
+        "dst_port": 1
+      },
+      {
+        "src_element_id": 5015,
+        "src_port": 0,
+        "dst_element_id": 5021,
+        "dst_port": 0
+      },
+      {
+        "src_element_id": 5021,
+        "src_port": 0,
+        "dst_element_id": 5012,
+        "dst_port": 0
+      },
+      {
+        "src_element_id": 5012,
+        "src_port": 0,
+        "dst_element_id": 5014,
+        "dst_port": 0
+      }
+    ]
+  }
+]

@@ -1,0 +1,29 @@
+*
+!.gitignore
+
+!lintech/
+!lintech/celectronicfence/
+!lintech/celectronicfence/**
+
+!sophon-stream-master/
+!sophon-stream-master/**
+
+# celectronicfence 运行/临时文件
+lintech/celectronicfence/.vscode/
+lintech/celectronicfence/tmp/
+lintech/celectronicfence/static/tmp/
+lintech/celectronicfence/static/upload/
+lintech/celectronicfence/*.log
+lintech/celectronicfence/pid.txt
+lintech/celectronicfence/server
+lintech/celectronicfence/recording_status.json*
+
+# 编辑器临时文件
+lintech/celectronicfence/**/*.swp
+lintech/celectronicfence/**/*.swo
+
+# sophon-stream 编译产物
+sophon-stream-master/build/
+sophon-stream-master/samples/build/
+sophon-stream-master/**/__pycache__/
+

@@ -1,0 +1,11 @@
+{
+  "configure": {
+    "ip": "127.0.0.1",
+    "port": 8088,
+    "path": "/api/registered-person-tracking/report"
+  },
+  "shared_object": "../../build/lib/libhttp_push.so",
+  "name": "http_push",
+  "side": "sophgo",
+  "thread_number": 1
+}

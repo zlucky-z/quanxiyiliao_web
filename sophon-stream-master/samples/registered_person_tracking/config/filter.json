@@ -1,0 +1,50 @@
+{
+  "configure": {
+    "forward_empty_frame": true,
+    "rules": [
+      {
+        "channel_id": 0,
+        "filters": [
+          {
+            "alert_first_frame": 0,
+            "alert_frame_skip_nums": 1,
+            "areas": [
+              [
+                {
+                  "left": 0,
+                  "top": 0
+                },
+                {
+                  "left": 1919,
+                  "top": 0
+                },
+                {
+                  "left": 1919,
+                  "top": 1079
+                },
+                {
+                  "left": 0,
+                  "top": 1079
+                }
+              ]
+            ],
+            "classes": [
+              0
+            ],
+            "times": [
+              {
+                "time_start": "00 00 00",
+                "time_end": "23 59 59"
+              }
+            ],
+            "type": 1
+          }
+        ]
+      }
+    ]
+  },
+  "shared_object": "../../build/lib/libfilter.so",
+  "name": "filter",
+  "side": "sophgo",
+  "thread_number": 1
+}

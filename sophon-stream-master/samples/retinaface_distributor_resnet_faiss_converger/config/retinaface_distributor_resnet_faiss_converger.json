@@ -1,0 +1,13 @@
+{
+    "channels": [
+        {
+            "channel_id": 20,
+            "fps": 3,
+            "loop_num": 1,
+            "sample_interval": 1,
+            "source_type": "RTSP",
+            "url": "rtsp://192.168.1.206:554/media/video1"
+        }
+    ],
+    "engine_config_path": "../retinaface_distributor_resnet_faiss_converger/config/engine_group.json"
+}

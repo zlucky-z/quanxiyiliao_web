@@ -1,0 +1,33 @@
+{
+  "channels": [
+    {
+      "channel_id": 1,
+      "url": "/dev/video0",
+      "source_type": "CAMERA",
+      "sample_interval": 1,
+      "loop_num": -1,
+      "fps": -1,
+      "decode_id": 5000
+    },
+    {
+      "channel_id": 2,
+      "url": "/dev/video1",
+      "source_type": "CAMERA",
+      "sample_interval": 1,
+      "loop_num": -1,
+      "fps": -1,
+      "decode_id": 5001
+    },
+    {
+      "channel_id": 3,
+      "url": "/dev/video2",
+      "source_type": "CAMERA",
+      "sample_interval": 1,
+      "loop_num": -1,
+      "fps": -1,
+      "decode_id": 5002
+    }
+  ],
+  "download_image": false,
+  "engine_config_path": "../trinocular_panorama_stitch/config/engine_resize.json"
+}

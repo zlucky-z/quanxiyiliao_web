@@ -1,0 +1,16 @@
+{
+  "configure": {
+    "main_port": 0,
+    "status_port": 1,
+    "track_timeout_ms": 3000,
+    "max_status_lag_ms": 15000,
+    "default_status_text": "status: unknown",
+    "no_face_status_text": "status: no_face",
+    "low_score_status_text": "status: low_score",
+    "matched_prefix": "status: "
+  },
+  "shared_object": "../../build/lib/libtrack_status_attach.so",
+  "name": "track_status_attach",
+  "side": "sophgo",
+  "thread_number": 1
+}

@@ -1,0 +1,14 @@
+{
+  "configure": {
+    "dst_w":1536,
+    "dst_h":435,
+    "crop_w": 3776,
+    "crop_h": 1014,
+    "crop_top": 0,
+    "crop_left": 0
+  },
+  "shared_object": "../../build/lib/libresize.so",
+  "name": "resize",
+  "side": "sophgo",
+  "thread_number": 1
+}
