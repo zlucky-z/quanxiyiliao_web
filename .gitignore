@@ -18,6 +18,16 @@ lintech/celectronicfence/pid.txt
 lintech/celectronicfence/server
 lintech/celectronicfence/recording_status.json*
 
+# 不提交视频素材/录像
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.flv
+*.wmv
+*.webm
+*.m4v
+
 # 编辑器临时文件
 lintech/celectronicfence/**/*.swp
 lintech/celectronicfence/**/*.swo
@@ -26,4 +36,3 @@ lintech/celectronicfence/**/*.swo
 sophon-stream-master/build/
 sophon-stream-master/samples/build/
 sophon-stream-master/**/__pycache__/
-

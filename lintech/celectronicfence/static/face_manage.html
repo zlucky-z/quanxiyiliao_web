@@ -1,0 +1,1698 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>人脸管理</title>
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="fontawesome-all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #2d3748;
+        }
+
+        .container-wrap {
+            max-width: 1600px;
+            margin: 0 auto;
+            height: calc(100vh - 40px);
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .container-wrap > .header {
+            background: linear-gradient(90deg, rgba(0, 30, 60, 0.62), rgba(0, 50, 100, 0.45)) !important;
+            border-radius: 8px !important;
+            border: 1px solid rgba(0, 162, 255, 0.35) !important;
+            box-shadow: 0 0 18px rgba(0, 162, 255, 0.22) !important;
+            padding: 9px 14px !important;
+            margin-bottom: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            min-height: 48px;
+        }
+
+        .container-wrap > .header .header-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #00d4ff !important;
+            line-height: 1.1;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .container-wrap > .header .header-title span {
+            color: inherit !important;
+        }
+
+        .container-wrap > .header .header-title i {
+            color: #00d4ff !important;
+            font-size: 17px;
+        }
+
+        .container-wrap > .header .action-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn-theme {
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .container-wrap > .header .btn-theme {
+            padding: 8px 14px !important;
+            border-radius: 7px !important;
+            font-size: 13px;
+            gap: 6px;
+            line-height: 1;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18) !important;
+        }
+
+        .btn-theme:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%);
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            margin-bottom: 18px;
+        }
+
+        .register-card {
+            flex-shrink: 0;
+        }
+
+        .faces-card {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            margin-bottom: 0;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            padding: 14px 18px;
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-body {
+            padding: 18px;
+        }
+
+        .register-card .card-header {
+            padding: 11px 16px;
+            font-size: 15px;
+        }
+
+        .register-card .card-body {
+            padding: 14px 16px 12px;
+        }
+
+        .register-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 12px;
+            align-items: end;
+        }
+
+        .register-card .register-form {
+            gap: 10px;
+        }
+
+        .form-item label {
+            font-size: 13px;
+            color: #4a5568;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .register-card .form-item label {
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .form-item input {
+            width: 100%;
+            border: 1px solid #cbd5e0;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-item input:focus {
+            border-color: #667eea;
+        }
+
+        .register-card .form-item input {
+            padding: 8px 10px;
+            font-size: 13px;
+        }
+
+        .register-card #faceImages {
+            padding: 6px 8px;
+            border-color: rgba(102, 126, 234, 0.35);
+            background: rgba(102, 126, 234, 0.06);
+            color: #334155;
+        }
+
+        .register-card #faceImages::file-selector-button {
+            margin-right: 10px;
+            padding: 6px 12px;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 6px;
+            background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+            color: #ffffff;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 6px 14px rgba(79, 70, 229, 0.24);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .register-card #faceImages::-webkit-file-upload-button {
+            margin-right: 10px;
+            padding: 6px 12px;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 6px;
+            background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+            color: #ffffff;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 6px 14px rgba(79, 70, 229, 0.24);
+        }
+
+        .register-card #faceImages:hover::file-selector-button {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(79, 70, 229, 0.3);
+        }
+
+        .register-card #registerBtn {
+            padding: 8px 14px;
+            min-height: 38px;
+            align-self: end;
+        }
+
+        .hint {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #718096;
+        }
+
+        .register-card .hint {
+            margin-top: 8px;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        .faces-card .card-header {
+            flex-shrink: 0;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .faces-card .card-body {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 14px 16px 16px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(102, 126, 234, 0.5) rgba(148, 163, 184, 0.12);
+        }
+
+        .faces-card-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .faces-toolbar {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .faces-selection-count {
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.74);
+            border: 1px solid rgba(148, 163, 184, 0.14);
+            color: #dbeafe;
+            font-size: 12px;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .faces-toolbar .btn-theme {
+            padding: 7px 12px;
+            font-size: 12px;
+            border-radius: 8px;
+            gap: 6px;
+        }
+
+        .faces-toolbar .btn-theme:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .faces-card .card-body::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .faces-card .card-body::-webkit-scrollbar-track {
+            background: rgba(148, 163, 184, 0.12);
+            border-radius: 999px;
+        }
+
+        .faces-card .card-body::-webkit-scrollbar-thumb {
+            background: rgba(102, 126, 234, 0.48);
+            border-radius: 999px;
+        }
+
+        .faces-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+            gap: 12px;
+            align-content: start;
+        }
+
+        .face-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 9px;
+            overflow: hidden;
+            background: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .face-card.selected {
+            border-color: rgba(14, 165, 233, 0.6);
+            box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.18);
+        }
+
+        .face-select-toggle {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            z-index: 3;
+            width: 26px;
+            height: 26px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 50%;
+            background: rgba(15, 23, 42, 0.78);
+            color: rgba(226, 232, 240, 0.78);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        .face-select-toggle.active {
+            background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%);
+            border-color: rgba(125, 211, 252, 0.28);
+            color: #ffffff;
+        }
+
+        .face-cover {
+            background: #edf2f7;
+            height: 138px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            cursor: zoom-in;
+            position: relative;
+        }
+
+        .face-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.2s ease;
+        }
+
+        .face-cover:hover img {
+            transform: scale(1.03);
+        }
+
+        .face-empty {
+            color: #94a3b8;
+            font-size: 32px;
+        }
+
+        .face-cover-hint {
+            position: absolute;
+            right: 8px;
+            bottom: 8px;
+            padding: 3px 7px;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.68);
+            color: #e2e8f0;
+            font-size: 11px;
+            line-height: 1;
+            pointer-events: none;
+        }
+
+        .face-content {
+            padding: 10px;
+        }
+
+        .face-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .face-meta {
+            font-size: 12px;
+            color: #475569;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .face-label {
+            font-size: 11px;
+            color: #64748b;
+            margin-bottom: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .face-actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .face-actions .btn-theme {
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 7px;
+            gap: 5px;
+        }
+
+        .image-preview-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.78);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            z-index: 10000;
+        }
+
+        .image-preview-modal.active {
+            display: flex;
+        }
+
+        .image-preview-dialog {
+            position: relative;
+            max-width: min(88vw, 980px);
+            max-height: 88vh;
+            padding: 12px;
+            border-radius: 14px;
+            background: rgba(15, 23, 42, 0.92);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38);
+        }
+
+        .image-preview-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(15, 23, 42, 0.78);
+            color: #f8fafc;
+            cursor: pointer;
+            font-size: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .image-preview-title {
+            color: #e2e8f0;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0 36px 10px 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .image-preview-img {
+            display: block;
+            max-width: min(84vw, 920px);
+            max-height: calc(88vh - 64px);
+            width: auto;
+            height: auto;
+            border-radius: 10px;
+            object-fit: contain;
+            background: #0f172a;
+        }
+
+        .batch-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.7);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 10001;
+        }
+
+        .batch-modal.active {
+            display: flex;
+        }
+
+        .batch-modal-dialog {
+            width: min(900px, 95vw);
+            max-height: 88vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-radius: 16px;
+            background: rgba(15, 23, 42, 0.96);
+            border: 1px solid rgba(0, 162, 255, 0.24);
+            box-shadow: 0 18px 48px rgba(0, 0, 0, 0.34);
+        }
+
+        .batch-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 16px;
+            background: linear-gradient(90deg, rgba(0, 30, 60, 0.72), rgba(0, 50, 100, 0.52));
+            border-bottom: 1px solid rgba(0, 162, 255, 0.18);
+        }
+
+        .batch-modal-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #00d4ff;
+        }
+
+        .batch-modal-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(15, 23, 42, 0.72);
+            color: #f8fafc;
+            cursor: pointer;
+            font-size: 15px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .batch-modal-body {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            overflow-y: auto;
+        }
+
+        .batch-help-card {
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: rgba(8, 18, 38, 0.72);
+            border: 1px solid rgba(0, 162, 255, 0.14);
+            color: #d8ebff;
+        }
+
+        .batch-help-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #7dd3fc;
+            margin-bottom: 6px;
+        }
+
+        .batch-help-text {
+            font-size: 13px;
+            line-height: 1.6;
+            color: rgba(226, 232, 240, 0.88);
+        }
+
+        .batch-example {
+            margin-top: 8px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.76);
+            color: #cbd5e1;
+            font-size: 12px;
+            line-height: 1.6;
+            white-space: pre-line;
+        }
+
+        .batch-form {
+            display: grid;
+            gap: 10px;
+        }
+
+        .batch-form label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #dbeafe;
+        }
+
+        #batchZipFile {
+            width: 100%;
+            border: 1px solid rgba(0, 162, 255, 0.18);
+            border-radius: 10px;
+            padding: 8px 10px;
+            background: rgba(8, 18, 38, 0.76);
+            color: #e2e8f0;
+        }
+
+        #batchZipFile::file-selector-button {
+            margin-right: 10px;
+            padding: 7px 12px;
+            border: 1px solid rgba(14, 165, 233, 0.2);
+            border-radius: 8px;
+            background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%);
+            color: #ffffff;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        #batchZipFile::-webkit-file-upload-button {
+            margin-right: 10px;
+            padding: 7px 12px;
+            border: 1px solid rgba(14, 165, 233, 0.2);
+            border-radius: 8px;
+            background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%);
+            color: #ffffff;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .batch-form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .batch-result {
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            background: rgba(8, 18, 38, 0.74);
+            min-height: 246px;
+            max-height: 246px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .batch-result.empty {
+            color: rgba(203, 213, 225, 0.76);
+            font-size: 13px;
+        }
+
+        .batch-result.success {
+            border-color: rgba(34, 197, 94, 0.24);
+        }
+
+        .batch-result.pending {
+            border-color: rgba(14, 165, 233, 0.24);
+            color: #dbeafe;
+        }
+
+        .batch-result.error {
+            border-color: rgba(244, 63, 94, 0.28);
+        }
+
+        .batch-result-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #f8fafc;
+            margin-bottom: 10px;
+        }
+
+        .batch-result-scroll {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding-right: 4px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(56, 189, 248, 0.45) rgba(15, 23, 42, 0.18);
+        }
+
+        .batch-result-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .batch-result-scroll::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.18);
+            border-radius: 999px;
+        }
+
+        .batch-result-scroll::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.45);
+            border-radius: 999px;
+        }
+
+        .batch-summary {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .batch-summary-item {
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.76);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+        }
+
+        .batch-summary-label {
+            font-size: 11px;
+            color: rgba(148, 163, 184, 0.88);
+            margin-bottom: 4px;
+        }
+
+        .batch-summary-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+
+        .batch-face-list,
+        .batch-warning-list {
+            display: grid;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .batch-face-item,
+        .batch-warning-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 9px 10px;
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.68);
+            color: #e2e8f0;
+            font-size: 13px;
+        }
+
+        .batch-warning-item {
+            justify-content: flex-start;
+            color: #fca5a5;
+        }
+
+        .batch-section-title {
+            margin-top: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #7dd3fc;
+            letter-spacing: 0.02em;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #64748b;
+            padding: 36px 12px;
+        }
+
+        .empty-state i {
+            font-size: 40px;
+            margin-bottom: 10px;
+            color: #94a3b8;
+        }
+
+        #toast {
+            position: fixed;
+            right: 24px;
+            top: 24px;
+            z-index: 9999;
+            padding: 10px 14px;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            display: none;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        .toast-success { background: #16a34a; }
+        .toast-error { background: #dc2626; }
+        .toast-info { background: #2563eb; }
+
+        @media (max-width: 992px) {
+            .container-wrap {
+                height: auto;
+            }
+
+            .register-form {
+                grid-template-columns: 1fr;
+            }
+
+            .faces-card {
+                min-height: 480px;
+            }
+
+            .faces-card .card-body {
+                max-height: 60vh;
+            }
+
+            .faces-grid {
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            }
+
+            .face-cover {
+                height: 122px;
+            }
+
+            .batch-summary {
+                grid-template-columns: 1fr;
+            }
+
+            .faces-toolbar {
+                width: 100%;
+                margin-left: 0;
+            }
+
+            .faces-toolbar .btn-theme {
+                flex: 1 1 auto;
+                justify-content: center;
+            }
+        }
+        body {
+            background:
+                radial-gradient(circle at top, rgba(0, 162, 255, 0.18) 0%, rgba(0, 162, 255, 0) 34%),
+                linear-gradient(180deg, #07111f 0%, #0a1628 56%, #09111d 100%) !important;
+            color: #dbe8ff;
+        }
+
+        .container-wrap .btn-theme {
+            border: 1px solid rgba(0, 162, 255, 0.22);
+            background: linear-gradient(180deg, rgba(8, 31, 53, 0.96), rgba(8, 22, 37, 0.98));
+            color: #eef9ff;
+            box-shadow: 0 12px 24px rgba(2, 8, 20, 0.24);
+        }
+
+        .container-wrap .btn-success {
+            background: linear-gradient(180deg, rgba(15, 57, 43, 0.96), rgba(10, 36, 28, 0.98)) !important;
+            border-color: rgba(72, 209, 146, 0.24);
+        }
+
+        .container-wrap .btn-danger {
+            background: linear-gradient(180deg, rgba(66, 24, 24, 0.96), rgba(44, 15, 15, 0.98)) !important;
+            border-color: rgba(255, 108, 108, 0.24);
+        }
+
+        .container-wrap .card {
+            background: linear-gradient(180deg, rgba(10, 20, 34, 0.96), rgba(8, 15, 27, 0.94)) !important;
+            border: 1px solid rgba(0, 162, 255, 0.16);
+            box-shadow: 0 18px 36px rgba(2, 8, 20, 0.28);
+        }
+
+        .container-wrap .card-header {
+            background: linear-gradient(90deg, rgba(5, 16, 29, 0.98), rgba(8, 26, 46, 0.95)) !important;
+            color: #edf6ff;
+            border-bottom: 1px solid rgba(0, 162, 255, 0.16);
+        }
+
+        .container-wrap .card-body,
+        .container-wrap .form-item label,
+        .container-wrap .hint,
+        .container-wrap .face-meta,
+        .container-wrap .face-label {
+            color: #8fa9ca !important;
+        }
+
+        .container-wrap .form-item input,
+        .container-wrap .register-card #faceImages {
+            background: rgba(5, 10, 25, 0.82) !important;
+            border: 1px solid rgba(0, 162, 255, 0.28) !important;
+            color: #edf6ff !important;
+        }
+
+        .container-wrap .form-item input:focus {
+            border-color: rgba(0, 212, 255, 0.42) !important;
+            box-shadow: 0 0 0 3px rgba(0, 162, 255, 0.14);
+        }
+
+        .container-wrap .register-card #faceImages::file-selector-button,
+        .container-wrap .register-card #faceImages::-webkit-file-upload-button {
+            background: linear-gradient(180deg, rgba(8, 31, 53, 0.96), rgba(8, 22, 37, 0.98)) !important;
+            border-color: rgba(0, 212, 255, 0.2) !important;
+            box-shadow: 0 10px 20px rgba(2, 8, 20, 0.28);
+        }
+
+        .container-wrap .faces-card .card-body::-webkit-scrollbar-track {
+            background: rgba(5, 10, 25, 0.58);
+        }
+
+        .container-wrap .faces-card .card-body::-webkit-scrollbar-thumb {
+            background: rgba(0, 212, 255, 0.32);
+        }
+
+        .container-wrap .face-card {
+            background: rgba(8, 17, 30, 0.94);
+            border-color: rgba(0, 162, 255, 0.12);
+        }
+
+        .container-wrap .face-card.selected {
+            border-color: rgba(0, 212, 255, 0.42);
+            box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.14);
+        }
+
+        .container-wrap .face-cover {
+            background: rgba(12, 21, 34, 0.96);
+        }
+
+        .container-wrap .face-empty {
+            color: #6f8caf;
+        }
+
+        .container-wrap .face-name,
+        .container-wrap .faces-selection-count {
+            color: #edf6ff !important;
+        }
+        body {
+            padding: 20px;
+        }
+
+        .container-wrap {
+            max-width: 95%;
+            width: 100%;
+            height: calc(100vh - 40px);
+        }
+
+        @media (min-width: 1400px) {
+            .container-wrap {
+                max-width: 1800px;
+            }
+        }
+
+        .container-wrap > .header {
+            min-height: 48px;
+        }
+
+        .container-wrap .btn-theme {
+            box-shadow: none !important;
+        }
+
+        .container-wrap .btn-theme:hover {
+            box-shadow: 0 12px 24px rgba(2, 8, 20, 0.24) !important;
+        }
+
+        .container-wrap .card {
+            border-radius: 12px !important;
+        }
+
+        .container-wrap .card-header {
+            min-height: 52px;
+        }
+
+        .container-wrap .image-preview-dialog,
+        .container-wrap .batch-modal-dialog {
+            background: linear-gradient(180deg, rgba(10, 20, 34, 0.98), rgba(8, 15, 27, 0.96)) !important;
+            border: 1px solid rgba(0, 162, 255, 0.18) !important;
+            box-shadow: 0 22px 40px rgba(2, 8, 20, 0.42) !important;
+        }
+
+        .container-wrap .batch-modal-header {
+            background: linear-gradient(90deg, rgba(5, 16, 29, 0.96), rgba(8, 26, 46, 0.92)) !important;
+        }
+
+        /* Final black sync: align face management header, cards and modal bars to the charcoal theme. */
+        html body {
+            background:
+                radial-gradient(circle at top, rgba(118, 128, 146, 0.12) 0%, rgba(118, 128, 146, 0) 32%),
+                linear-gradient(180deg, #050608 0%, #090b0f 56%, #07090c 100%) !important;
+        }
+
+        html body .container-wrap > .header {
+            background: linear-gradient(180deg, rgba(9, 11, 15, 0.99), rgba(14, 18, 24, 0.96)) !important;
+            border: 1px solid rgba(122, 136, 158, 0.18) !important;
+            box-shadow: 0 16px 30px rgba(0, 0, 0, 0.38) !important;
+        }
+
+        html body .container-wrap .btn-theme {
+            background: linear-gradient(180deg, rgba(19, 23, 29, 0.97), rgba(10, 13, 18, 0.99)) !important;
+            border: 1px solid rgba(122, 136, 158, 0.18) !important;
+            box-shadow: none !important;
+        }
+
+        html body .container-wrap .btn-theme:hover {
+            background: linear-gradient(180deg, rgba(25, 30, 37, 0.98), rgba(14, 17, 22, 0.99)) !important;
+            border-color: rgba(150, 166, 189, 0.24) !important;
+            box-shadow: 0 14px 24px rgba(0, 0, 0, 0.26) !important;
+        }
+
+        html body .container-wrap .btn-success {
+            border-color: rgba(97, 162, 129, 0.22) !important;
+        }
+
+        html body .container-wrap .btn-danger {
+            border-color: rgba(182, 101, 101, 0.22) !important;
+        }
+
+        html body .container-wrap .card,
+        html body .container-wrap .image-preview-dialog,
+        html body .container-wrap .batch-modal-dialog {
+            background: linear-gradient(180deg, rgba(9, 11, 15, 0.98), rgba(13, 17, 23, 0.95)) !important;
+            border-color: rgba(122, 136, 158, 0.14) !important;
+            box-shadow: 0 20px 38px rgba(0, 0, 0, 0.44) !important;
+        }
+
+        html body .container-wrap .card-header,
+        html body .container-wrap .batch-modal-header {
+            background: linear-gradient(90deg, rgba(11, 13, 18, 0.99), rgba(18, 22, 28, 0.96)) !important;
+            border-bottom: 1px solid rgba(122, 136, 158, 0.14) !important;
+        }
+
+        html body .container-wrap .batch-modal-body {
+            background: linear-gradient(180deg, rgba(11, 13, 18, 0.96), rgba(9, 11, 15, 0.98)) !important;
+        }
+
+        html body .container-wrap .batch-help-card,
+        html body .container-wrap .batch-example,
+        html body .container-wrap .batch-result,
+        html body .container-wrap .batch-summary-item {
+            background: linear-gradient(180deg, rgba(16, 19, 25, 0.96), rgba(10, 13, 18, 0.97)) !important;
+            border-color: rgba(122, 136, 158, 0.16) !important;
+        }
+
+        html body .container-wrap .batch-help-title,
+        html body .container-wrap .batch-form label,
+        html body .container-wrap .batch-result-title,
+        html body .container-wrap .batch-summary-value {
+            color: #00d4ff !important;
+        }
+
+        html body .container-wrap #batchZipFile {
+            background: rgba(10, 13, 18, 0.96) !important;
+            border-color: rgba(122, 136, 158, 0.18) !important;
+            color: #edf4ff !important;
+        }
+
+        html body .container-wrap #batchZipFile::file-selector-button,
+        html body .container-wrap #batchZipFile::-webkit-file-upload-button {
+            background: linear-gradient(180deg, rgba(17, 21, 27, 0.96), rgba(10, 13, 18, 0.98)) !important;
+            border: 1px solid rgba(122, 136, 158, 0.18) !important;
+            color: #00d4ff !important;
+            box-shadow: none !important;
+        }
+
+        html body .container-wrap .register-card #faceName,
+        html body .container-wrap .register-card #faceLabel,
+        html body .container-wrap .register-card .form-item input {
+            background: rgba(10, 13, 18, 0.96) !important;
+            border-color: rgba(122, 136, 158, 0.18) !important;
+            color: #edf6ff !important;
+            color-scheme: dark;
+        }
+
+        html body .container-wrap .register-card #faceName,
+        html body .container-wrap .register-card #faceLabel,
+        html body .container-wrap .register-card #faceImages {
+            min-height: 46px !important;
+            height: 46px !important;
+            box-sizing: border-box !important;
+        }
+
+        html body .container-wrap .register-card #faceImages {
+            background: rgba(10, 13, 18, 0.96) !important;
+            border-color: rgba(122, 136, 158, 0.18) !important;
+            color: #edf6ff !important;
+            padding: 6px 10px !important;
+            line-height: 1.2 !important;
+        }
+
+        html body .container-wrap .register-card #faceName::placeholder,
+        html body .container-wrap .register-card #faceLabel::placeholder,
+        html body .container-wrap .register-card #faceImages::placeholder {
+            color: #6f8caf !important;
+        }
+
+        html body .container-wrap .register-card #faceName:focus,
+        html body .container-wrap .register-card #faceLabel:focus,
+        html body .container-wrap .register-card .form-item input:focus {
+            background: rgba(12, 15, 20, 0.98) !important;
+            border-color: rgba(160, 178, 202, 0.24) !important;
+            box-shadow: 0 0 0 3px rgba(94, 106, 126, 0.12) !important;
+        }
+
+        html body .container-wrap .register-card #faceImages:focus {
+            background: rgba(12, 15, 20, 0.98) !important;
+            border-color: rgba(160, 178, 202, 0.24) !important;
+            box-shadow: 0 0 0 3px rgba(94, 106, 126, 0.12) !important;
+        }
+
+        html body .container-wrap .register-card #faceImages::file-selector-button,
+        html body .container-wrap .register-card #faceImages::-webkit-file-upload-button {
+            height: 32px !important;
+            margin-right: 10px !important;
+            padding: 5px 12px !important;
+            border-radius: 7px !important;
+            line-height: 1 !important;
+            vertical-align: middle !important;
+            background: linear-gradient(180deg, rgba(17, 21, 27, 0.96), rgba(10, 13, 18, 0.98)) !important;
+            border: 1px solid rgba(122, 136, 158, 0.18) !important;
+            color: #00d4ff !important;
+            box-shadow: none !important;
+        }
+
+        html body .container-wrap .register-card #faceName:-webkit-autofill,
+        html body .container-wrap .register-card #faceName:-webkit-autofill:hover,
+        html body .container-wrap .register-card #faceName:-webkit-autofill:focus,
+        html body .container-wrap .register-card #faceLabel:-webkit-autofill,
+        html body .container-wrap .register-card #faceLabel:-webkit-autofill:hover,
+        html body .container-wrap .register-card #faceLabel:-webkit-autofill:focus {
+            -webkit-text-fill-color: #edf6ff !important;
+            caret-color: #edf6ff;
+            -webkit-box-shadow: 0 0 0 1000px rgba(10, 13, 18, 0.96) inset !important;
+            box-shadow: 0 0 0 1000px rgba(10, 13, 18, 0.96) inset !important;
+            border: 1px solid rgba(122, 136, 158, 0.18) !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+    </style>
+    <link rel="stylesheet" href="pcb-theme.css?v=20260323-black3">
+</head>
+<body>
+    <div id="toast"></div>
+    <div class="image-preview-modal" id="imagePreviewModal" onclick="closeImagePreview(event)">
+        <div class="image-preview-dialog">
+            <button type="button" class="image-preview-close" onclick="closeImagePreview()">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="image-preview-title" id="imagePreviewTitle">人脸预览</div>
+            <img id="imagePreviewImg" class="image-preview-img" src="" alt="人脸预览">
+        </div>
+    </div>
+    <div class="batch-modal" id="batchImportModal" onclick="closeBatchImportModal(event)">
+        <div class="batch-modal-dialog">
+            <div class="batch-modal-header">
+                <div class="batch-modal-title">
+                    <i class="fas fa-file-archive"></i>
+                    <span>批量导入人脸</span>
+                </div>
+                <button type="button" class="batch-modal-close" onclick="closeBatchImportModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="batch-modal-body">
+                <div class="batch-help-card">
+                    <div class="batch-help-title">导入规则</div>
+                    <div class="batch-help-text">直接上传 zip 压缩包即可。系统会按英文文件夹名自动解析，并默认将文件夹名同时作为人脸名称和识别标签。</div>
+                    <div class="batch-example">支持示例:
+faces.zip
+  zhangsan/1.jpg
+  zhangsan/2.jpg
+  lisi/1.jpg
+
+也支持外层再套一层总目录:
+faces/zhangsan/1.jpg
+faces/lisi/1.jpg</div>
+                </div>
+                <form id="batchImportForm" class="batch-form">
+                    <label for="batchZipFile">选择 zip 压缩包</label>
+                    <input id="batchZipFile" type="file" accept=".zip,application/zip" required>
+                    <div class="batch-form-actions">
+                        <button type="submit" class="btn-theme btn-primary" id="batchImportSubmitBtn">
+                            <i class="fas fa-cloud-upload-alt"></i> 开始导入
+                        </button>
+                    </div>
+                </form>
+                <div class="batch-result empty" id="batchImportResult">等待上传压缩包。导入完成后会在这里显示成功人数、图片数量和跳过原因。</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-wrap">
+        <div class="header">
+            <div class="header-title">
+                <i class="fas fa-user-check"></i>
+                <span>人脸管理</span>
+            </div>
+            <div class="action-group">
+                <button class="btn-theme btn-primary" id="batchImportBtn">
+                    <i class="fas fa-file-archive"></i> 批量导入
+                </button>
+                <button class="btn-theme btn-primary" id="refreshBtn">
+                    <i class="fas fa-sync-alt"></i> 刷新列表
+                </button>
+                <button class="btn-theme btn-success" id="rebuildBtn">
+                    <i class="fas fa-database"></i> 重建特征库
+                </button>
+            </div>
+        </div>
+
+        <div class="card register-card">
+            <div class="card-header">
+                <i class="fas fa-user-plus"></i>
+                <span>注册/新增人脸样本</span>
+            </div>
+            <div class="card-body">
+                <form id="registerForm" class="register-form">
+                    <div class="form-item">
+                        <label for="faceName">人脸名称（英文）</label>
+                        <input id="faceName" type="text" placeholder="例如：zhangsan" maxlength="64" autocomplete="off" required>
+                    </div>
+                    <div class="form-item">
+                        <label for="faceLabel">识别标签（英文）</label>
+                        <input id="faceLabel" type="text" placeholder="例如：zhangsan" maxlength="64" autocomplete="off">
+                    </div>
+                    <div class="form-item">
+                        <label for="faceImages">人脸图片</label>
+                        <input id="faceImages" type="file" accept="image/*" multiple required>
+                    </div>
+                    <button type="submit" class="btn-theme btn-primary" id="registerBtn">
+                        <i class="fas fa-upload"></i> 提交注册
+                    </button>
+                </form>
+                <div class="hint">同名会自动追加样本，并重建特征库。视频叠字仅支持英文标签，中文名会自动映射。</div>
+            </div>
+        </div>
+
+        <div class="card faces-card">
+            <div class="card-header">
+                <div class="faces-card-title">
+                    <i class="fas fa-address-book"></i>
+                    <span>已注册人脸</span>
+                </div>
+                <div class="faces-toolbar">
+                    <span class="faces-selection-count" id="facesSelectionCount">未选择</span>
+                    <button type="button" class="btn-theme btn-danger" id="batchDeleteBtn" disabled>
+                        <i class="fas fa-trash"></i> 批量删除
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="facesGrid" class="faces-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showToast(message, type) {
+            const toast = document.getElementById('toast');
+            toast.className = '';
+            toast.classList.add(type === 'error' ? 'toast-error' : (type === 'success' ? 'toast-success' : 'toast-info'));
+            toast.textContent = message;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 2500);
+        }
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        const selectedFaces = new Set();
+
+        async function parseResponse(response) {
+            let data = {};
+            try {
+                data = await response.json();
+            } catch (e) {
+                data = {};
+            }
+            if (!response.ok || data.status === 'error') {
+                const msg = data.message || '请求失败';
+                throw new Error(msg);
+            }
+            return data;
+        }
+
+        function syncBodyModalLock() {
+            const previewOpen = document.getElementById('imagePreviewModal').classList.contains('active');
+            const batchOpen = document.getElementById('batchImportModal').classList.contains('active');
+            document.body.style.overflow = (previewOpen || batchOpen) ? 'hidden' : '';
+        }
+
+        function resetBatchImportResult() {
+            const resultBox = document.getElementById('batchImportResult');
+            resultBox.className = 'batch-result empty';
+            resultBox.textContent = '等待上传压缩包。导入完成后会在这里显示成功人数、图片数量和跳过原因。';
+        }
+
+        function renderBatchImportResult(data, isError = false) {
+            const resultBox = document.getElementById('batchImportResult');
+            const faces = Array.isArray(data.faces) ? data.faces : [];
+            const warnings = Array.isArray(data.warnings) ? data.warnings : [];
+
+            if (isError) {
+                resultBox.className = 'batch-result error';
+                resultBox.innerHTML = `
+                    <div class="batch-result-title">导入失败</div>
+                    <div class="batch-warning-list">
+                        <div class="batch-warning-item">${escapeHtml(data.message || '批量导入失败')}</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const faceItems = faces.map(face => `
+                <div class="batch-face-item">
+                    <span>${escapeHtml(face.name || '-')}</span>
+                    <strong>${Number(face.savedCount || 0)} 张</strong>
+                </div>
+            `).join('');
+
+            const warningItems = warnings.map(item => `
+                <div class="batch-warning-item">${escapeHtml(item)}</div>
+            `).join('');
+
+            resultBox.className = 'batch-result success';
+            resultBox.innerHTML = `
+                <div class="batch-result-title">${escapeHtml(data.message || '批量导入完成')}</div>
+                <div class="batch-summary">
+                    <div class="batch-summary-item">
+                        <div class="batch-summary-label">导入人数</div>
+                        <div class="batch-summary-value">${Number(data.totalFaces || faces.length || 0)}</div>
+                    </div>
+                    <div class="batch-summary-item">
+                        <div class="batch-summary-label">新增图片</div>
+                        <div class="batch-summary-value">${Number(data.totalSaved || 0)}</div>
+                    </div>
+                    <div class="batch-summary-item">
+                        <div class="batch-summary-label">提示信息</div>
+                        <div class="batch-summary-value">${warnings.length}</div>
+                    </div>
+                </div>
+                <div class="batch-result-scroll">
+                    ${faceItems ? `<div class="batch-section-title">成功导入</div><div class="batch-face-list">${faceItems}</div>` : ''}
+                    ${warningItems ? `<div class="batch-section-title">跳过或提示</div><div class="batch-warning-list">${warningItems}</div>` : ''}
+                </div>
+            `;
+        }
+
+        function renderBatchImportPending(message) {
+            const resultBox = document.getElementById('batchImportResult');
+            resultBox.className = 'batch-result pending';
+            resultBox.innerHTML = `
+                <div class="batch-result-title">正在导入</div>
+                <div class="batch-result-scroll">
+                    <div class="batch-warning-list">
+                        <div class="batch-face-item">${escapeHtml(message || '正在解析压缩包并重建人脸库，请稍候...')}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateFaceSelectionUi() {
+            const count = selectedFaces.size;
+            const countNode = document.getElementById('facesSelectionCount');
+            const batchDeleteBtn = document.getElementById('batchDeleteBtn');
+            countNode.textContent = count > 0 ? `已选 ${count} 项` : '未选择';
+            batchDeleteBtn.disabled = count === 0;
+            batchDeleteBtn.innerHTML = `<i class="fas fa-trash"></i> 批量删除${count > 0 ? ` (${count})` : ''}`;
+        }
+
+        function syncSelectedFacesWithCurrentList(faces) {
+            const available = new Set((faces || []).map(face => String(face.name || '')));
+            Array.from(selectedFaces).forEach(name => {
+                if (!available.has(name)) {
+                    selectedFaces.delete(name);
+                }
+            });
+            updateFaceSelectionUi();
+        }
+
+        function openBatchImportModal() {
+            document.getElementById('batchImportModal').classList.add('active');
+            document.getElementById('batchImportForm').reset();
+            resetBatchImportResult();
+            syncBodyModalLock();
+        }
+
+        function closeBatchImportModal(event) {
+            if (event && event.target && event.target.id !== 'batchImportModal') {
+                return;
+            }
+            document.getElementById('batchImportModal').classList.remove('active');
+            syncBodyModalLock();
+        }
+
+        async function loadFaces() {
+            const grid = document.getElementById('facesGrid');
+            grid.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><div>加载中...</div></div>';
+
+            try {
+                const response = await fetch('/api/faces?t=' + Date.now());
+                const data = await parseResponse(response);
+                renderFaces(data.faces || []);
+            } catch (error) {
+                grid.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><div>' + error.message + '</div></div>';
+            }
+        }
+
+        function renderFaces(faces) {
+            const grid = document.getElementById('facesGrid');
+            syncSelectedFacesWithCurrentList(faces);
+            if (!faces.length) {
+                selectedFaces.clear();
+                updateFaceSelectionUi();
+                grid.innerHTML = '<div class="empty-state"><i class="fas fa-user-slash"></i><div>暂无已注册人脸</div></div>';
+                return;
+            }
+
+            grid.innerHTML = faces.map(face => {
+                const preview = '/api/faces/preview?name=' + encodeURIComponent(face.name) + '&t=' + Date.now();
+                const safeName = escapeHtml(face.name);
+                const safeLabel = escapeHtml(face.label || '');
+                const encodedName = encodeURIComponent(face.name);
+                const isSelected = selectedFaces.has(face.name);
+                return `
+                    <div class="face-card${isSelected ? ' selected' : ''}">
+                        <button type="button" class="face-select-toggle${isSelected ? ' active' : ''}" onclick="toggleFaceSelection('${encodedName}', this, event)" title="${isSelected ? '取消选择' : '选择'}">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <div class="face-cover" onclick="openImagePreviewFromCard(this)" data-preview-src="${escapeHtml(preview)}" data-face-name="${safeName}">
+                            <img src="${preview}" alt="${safeName}" onerror="handleFacePreviewError(this)">
+                            <span class="face-cover-hint">点击放大</span>
+                        </div>
+                        <div class="face-content">
+                            <div class="face-name" title="${safeName}">${safeName}</div>
+                            <div class="face-meta">
+                                <span>样本: ${face.imageCount || 0}</span>
+                                <span>特征: ${face.featureCount || 0}</span>
+                            </div>
+                            <div class="face-label" title="识别标签: ${safeLabel || '-'}">识别标签: ${safeLabel || '-'}</div>
+                            <div class="face-actions">
+                                <button class="btn-theme btn-danger" onclick="deleteFace('${encodedName}')">
+                                    <i class="fas fa-trash"></i> 删除
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleFaceSelection(encodedName, toggle, event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            const faceName = decodeURIComponent(encodedName);
+            const card = toggle ? toggle.closest('.face-card') : null;
+            const nextSelected = !selectedFaces.has(faceName);
+
+            if (nextSelected) {
+                selectedFaces.add(faceName);
+            } else {
+                selectedFaces.delete(faceName);
+            }
+
+            if (card) {
+                card.classList.toggle('selected', nextSelected);
+            }
+            if (toggle) {
+                toggle.classList.toggle('active', nextSelected);
+                toggle.title = nextSelected ? '取消选择' : '选择';
+            }
+            updateFaceSelectionUi();
+        }
+
+        function handleFacePreviewError(img) {
+            const cover = img.parentElement;
+            cover.removeAttribute('onclick');
+            cover.style.cursor = 'default';
+            cover.innerHTML = '<div class="face-empty"><i class="fas fa-user"></i></div>';
+        }
+
+        function openImagePreview(src, name) {
+            const modal = document.getElementById('imagePreviewModal');
+            const previewImg = document.getElementById('imagePreviewImg');
+            const title = document.getElementById('imagePreviewTitle');
+            previewImg.src = src;
+            previewImg.alt = name || '人脸预览';
+            title.textContent = name || '人脸预览';
+            modal.classList.add('active');
+            syncBodyModalLock();
+        }
+
+        function openImagePreviewFromCard(element) {
+            openImagePreview(element.dataset.previewSrc, element.dataset.faceName);
+        }
+
+        function closeImagePreview(event) {
+            if (event && event.target && event.target.id !== 'imagePreviewModal') {
+                return;
+            }
+            const modal = document.getElementById('imagePreviewModal');
+            const previewImg = document.getElementById('imagePreviewImg');
+            modal.classList.remove('active');
+            previewImg.src = '';
+            syncBodyModalLock();
+        }
+
+        async function registerFace(event) {
+            event.preventDefault();
+            const nameInput = document.getElementById('faceName');
+            const labelInput = document.getElementById('faceLabel');
+            const imageInput = document.getElementById('faceImages');
+            const registerBtn = document.getElementById('registerBtn');
+
+            const faceName = nameInput.value.trim();
+            const faceLabel = labelInput.value.trim();
+            const files = imageInput.files;
+            if (!faceName) {
+                showToast('请输入人脸名称', 'error');
+                return;
+            }
+            if (faceLabel && !/^[A-Za-z0-9_-]{1,64}$/.test(faceLabel)) {
+                showToast('识别标签仅支持英文、数字、下划线、短横线', 'error');
+                return;
+            }
+            if (!files || files.length === 0) {
+                showToast('请至少选择一张图片', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('name', faceName);
+            if (faceLabel) {
+                formData.append('label', faceLabel);
+            }
+            Array.from(files).forEach(file => formData.append('images', file));
+
+            registerBtn.disabled = true;
+            registerBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
+            try {
+                const response = await fetch('/api/faces/register', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await parseResponse(response);
+                showToast(data.message || '注册成功', 'success');
+                document.getElementById('registerForm').reset();
+                await loadFaces();
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                registerBtn.disabled = false;
+                registerBtn.innerHTML = '<i class="fas fa-upload"></i> 提交注册';
+            }
+        }
+
+        async function deleteFace(encodedName) {
+            const faceName = decodeURIComponent(encodedName);
+            try {
+                const response = await fetch('/api/faces/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: faceName })
+                });
+                const data = await parseResponse(response);
+                selectedFaces.delete(faceName);
+                updateFaceSelectionUi();
+                showToast(data.message || '删除成功', 'success');
+                await loadFaces();
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+
+        async function batchDeleteFaces() {
+            const names = Array.from(selectedFaces);
+            if (!names.length) {
+                showToast('请先选择要删除的人脸', 'error');
+                return;
+            }
+
+            const batchDeleteBtn = document.getElementById('batchDeleteBtn');
+            batchDeleteBtn.disabled = true;
+            batchDeleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 删除中...';
+
+            try {
+                const response = await fetch('/api/faces/batch_delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ names })
+                });
+                const data = await parseResponse(response);
+                selectedFaces.clear();
+                updateFaceSelectionUi();
+                showToast(data.message || `已删除 ${Number(data.deletedCount || names.length)} 人脸`, 'success');
+                await loadFaces();
+            } catch (error) {
+                updateFaceSelectionUi();
+                showToast(error.message, 'error');
+            }
+        }
+
+        async function rebuildDatabase() {
+            const rebuildBtn = document.getElementById('rebuildBtn');
+            rebuildBtn.disabled = true;
+            rebuildBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 重建中...';
+            try {
+                const response = await fetch('/api/faces/rebuild', { method: 'POST' });
+                const data = await parseResponse(response);
+                showToast(data.message || '重建成功', 'success');
+                await loadFaces();
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                rebuildBtn.disabled = false;
+                rebuildBtn.innerHTML = '<i class="fas fa-database"></i> 重建特征库';
+            }
+        }
+
+        async function batchRegisterFaces(event) {
+            event.preventDefault();
+            const zipInput = document.getElementById('batchZipFile');
+            const submitBtn = document.getElementById('batchImportSubmitBtn');
+            const file = zipInput.files && zipInput.files[0];
+
+            if (!file) {
+                showToast('请先选择 zip 压缩包', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('archive', file);
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 导入中...';
+            renderBatchImportPending('正在解析压缩包并重建人脸库，请稍候...');
+
+            try {
+                const response = await fetch('/api/faces/batch_register', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await parseResponse(response);
+                renderBatchImportResult(data);
+                showToast(`批量导入完成，已处理 ${Number(data.totalFaces || 0)} 人`, 'success');
+                await loadFaces();
+            } catch (error) {
+                renderBatchImportResult({ message: error.message }, true);
+                showToast(error.message, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> 开始导入';
+            }
+        }
+
+        document.getElementById('registerForm').addEventListener('submit', registerFace);
+        document.getElementById('batchImportForm').addEventListener('submit', batchRegisterFaces);
+        document.getElementById('batchImportBtn').addEventListener('click', openBatchImportModal);
+        document.getElementById('batchDeleteBtn').addEventListener('click', batchDeleteFaces);
+        document.getElementById('refreshBtn').addEventListener('click', loadFaces);
+        document.getElementById('rebuildBtn').addEventListener('click', rebuildDatabase);
+        window.deleteFace = deleteFace;
+        window.toggleFaceSelection = toggleFaceSelection;
+        window.openBatchImportModal = openBatchImportModal;
+        window.closeBatchImportModal = closeBatchImportModal;
+        window.openImagePreview = openImagePreview;
+        window.openImagePreviewFromCard = openImagePreviewFromCard;
+        window.closeImagePreview = closeImagePreview;
+        window.handleFacePreviewError = handleFacePreviewError;
+
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') {
+                closeImagePreview();
+                closeBatchImportModal();
+            }
+        });
+
+        updateFaceSelectionUi();
+        loadFaces();
+    </script>
+</body>
+</html>

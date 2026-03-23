@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "tasks": [
+    {
+      "nextRecordId": 9,
+      "persons": [
+        {
+          "entries": 1,
+          "exits": 1,
+          "firstSeenMs": 1774239624692,
+          "label": "xuzhiyaun",
+          "lastEnterMs": 1774239624692,
+          "lastExitMs": 1774239982683,
+          "lastSeenMs": 1774239982683,
+          "totalDwellMs": 357991
+        },
+        {
+          "entries": 7,
+          "exits": 7,
+          "firstSeenMs": 1774238137280,
+          "label": "zhaoyanzhi",
+          "lastEnterMs": 1774240377713,
+          "lastExitMs": 1774240497750,
+          "lastSeenMs": 1774240497750,
+          "totalDwellMs": 202228
+        }
+      ],
+      "records": [
+        {
+          "confirmTimeMs": 1774238139092,
+          "durationMs": 4811,
+          "enterTimeMs": 1774238137280,
+          "exitTimeMs": 1774238142091,
+          "firstSeenMs": 1774238137280,
+          "label": "zhaoyanzhi",
+          "lastSeenMs": 1774238142091,
+          "recordId": 1,
+          "trackId": 31
+        },
+        {
+          "confirmTimeMs": 1774238190771,
+          "durationMs": 11127,
+          "enterTimeMs": 1774238180892,
+          "exitTimeMs": 1774238192019,
+          "firstSeenMs": 1774238180892,
+          "label": "zhaoyanzhi",
+          "lastSeenMs": 1774238192019,
+          "recordId": 2,
+          "trackId": 40
+        },
+        {
+          "confirmTimeMs": 1774238246421,
+          "durationMs": 20610,
+          "enterTimeMs": 1774238237721,
+          "exitTimeMs": 1774238258331,
+          "firstSeenMs": 1774238237721,
+          "label": "zhaoyanzhi",
+          "lastSeenMs": 1774238258331,
+          "recordId": 3,
+          "trackId": 6
+        },
+        {
+          "confirmTimeMs": 1774238263455,
+          "durationMs": 18575,
+          "enterTimeMs": 1774238259512,
+          "exitTimeMs": 1774238278087,
+          "firstSeenMs": 1774238259512,
+          "label": "zhaoyanzhi",
+          "lastSeenMs": 1774238278087,
+          "recordId": 4,
+          "trackId": 11
+        },
+        {
+          "confirmTimeMs": 1774238323970,
+          "durationMs": 8748,
+          "enterTimeMs": 1774238320142,
+          "exitTimeMs": 1774238328890,
+          "firstSeenMs": 1774238320142,
+          "label": "zhaoyanzhi",
+          "lastSeenMs": 1774238328890,
+          "recordId": 5,
+          "trackId": 22
+        },
+        {
+          "confirmTimeMs": 1774238373289,
+          "durationMs": 18320,
+          "enterTimeMs": 1774238356769,
+          "exitTimeMs": 1774238375089,
+          "firstSeenMs": 1774238356769,
+          "label": "zhaoyanzhi",
+          "lastSeenMs": 1774238375089,
+          "recordId": 6,
+          "trackId": 33
+        },
+        {
+          "confirmTimeMs": 1774239975683,
+          "durationMs": 357991,
+          "enterTimeMs": 1774239624692,
+          "exitTimeMs": 1774239982683,
+          "firstSeenMs": 1774239624692,
+          "label": "xuzhiyaun",
+          "lastSeenMs": 1774239982683,
+          "recordId": 7,
+          "trackId": 45
+        },
+        {
+          "confirmTimeMs": 1774240452591,
+          "durationMs": 120037,
+          "enterTimeMs": 1774240377713,
+          "exitTimeMs": 1774240497750,
+          "firstSeenMs": 1774240377713,
+          "label": "zhaoyanzhi",
+          "lastSeenMs": 1774240497750,
+          "recordId": 8,
+          "trackId": 639
+        }
+      ],
+      "taskId": 6
+    }
+  ],
+  "updatedAtMs": 1774240500755
+}

@@ -1,0 +1,1656 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>编辑区域</title>
+    <link rel="stylesheet" href="pcb-theme.css?v=20260323-black3">
+    <script src="axios.min.js"></script>
+    <script src="fabric.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            background:
+                radial-gradient(circle at 12% 18%, rgba(0, 212, 255, 0.10), transparent 26%),
+                radial-gradient(circle at 88% 10%, rgba(56, 189, 248, 0.10), transparent 20%),
+                linear-gradient(135deg, #040814 0%, #081528 52%, #030915 100%);
+            color: #e6f7ff;
+            overflow: hidden;
+        }
+
+        .page-shell {
+            height: 100vh;
+            padding: 16px;
+            overflow: hidden;
+        }
+
+        .page-card {
+            background: linear-gradient(145deg, rgba(8, 20, 40, 0.92), rgba(10, 26, 50, 0.82));
+            border: 1px solid rgba(0, 162, 255, 0.18);
+            border-radius: 22px;
+            box-shadow:
+                0 18px 36px rgba(0, 0, 0, 0.34),
+                inset 0 1px 0 rgba(255, 255, 255, 0.03);
+            padding: 18px;
+            height: calc(100vh - 32px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 18px;
+            margin-bottom: 12px;
+            flex: 0 0 auto;
+        }
+
+        .page-title {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+            color: #00d4ff;
+        }
+
+        .page-subtitle {
+            margin-top: 8px;
+            color: rgba(214, 231, 255, 0.72);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .header-actions,
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toolbar {
+            padding: 12px 14px;
+            background: linear-gradient(180deg, rgba(7, 18, 36, 0.95) 0%, rgba(10, 24, 48, 0.92) 100%);
+            border: 1px solid rgba(0, 162, 255, 0.16);
+            border-radius: 16px;
+            margin-bottom: 12px;
+            flex: 0 0 auto;
+        }
+
+        .btn {
+            border: 1px solid rgba(0, 162, 255, 0.16);
+            background: rgba(5, 16, 32, 0.82);
+            color: #e6f7ff;
+            min-height: 40px;
+            padding: 0 16px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 18px rgba(0, 0, 0, 0.28);
+        }
+
+        .btn-primary {
+            border-color: rgba(0, 212, 255, 0.28);
+            background: linear-gradient(135deg, rgba(2, 132, 199, 0.92), rgba(34, 211, 238, 0.82));
+            color: #fff;
+        }
+
+        .btn-secondary {
+            background: rgba(7, 18, 36, 0.95);
+        }
+
+        .btn-tool.active {
+            border-color: rgba(0, 212, 255, 0.28);
+            background: rgba(0, 212, 255, 0.12);
+            color: #00d4ff;
+        }
+
+        .btn:disabled {
+            cursor: not-allowed;
+            color: rgba(214, 231, 255, 0.36);
+            background: rgba(7, 18, 36, 0.7);
+            border-color: rgba(0, 162, 255, 0.10);
+            box-shadow: none;
+            transform: none;
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 320px;
+            gap: 18px;
+            align-items: start;
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .workspace.panel-hidden {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .workspace.panel-hidden #regionPanel {
+            display: none;
+        }
+
+        .canvas-card,
+        .region-panel {
+            background: linear-gradient(145deg, rgba(8, 20, 40, 0.92), rgba(10, 26, 50, 0.82));
+            border: 1px solid rgba(0, 162, 255, 0.16);
+            border-radius: 18px;
+            box-shadow:
+                0 12px 24px rgba(0, 0, 0, 0.22),
+                inset 0 1px 0 rgba(255, 255, 255, 0.03);
+            min-height: 0;
+            height: 100%;
+        }
+
+        .canvas-card {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .canvas-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex: 0 0 auto;
+        }
+
+        .canvas-topbar h2 {
+            margin: 0;
+            font-size: 18px;
+            color: #e6f7ff;
+        }
+
+        .canvas-hint {
+            color: rgba(214, 231, 255, 0.6);
+            font-size: 13px;
+        }
+
+        .canvas-viewport {
+            height: 100%;
+            min-height: 0;
+            border-radius: 16px;
+            background:
+                linear-gradient(90deg, rgba(0, 162, 255, 0.08) 1px, transparent 1px),
+                linear-gradient(rgba(0, 162, 255, 0.08) 1px, transparent 1px),
+                #0b1528;
+            background-size: 32px 32px, 32px 32px, auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+            flex: 1 1 auto;
+        }
+
+        .canvas-stage {
+            position: relative;
+            display: inline-block;
+            line-height: 0;
+            max-width: 100%;
+            max-height: 100%;
+            overflow: hidden;
+        }
+
+        .canvas-stage img,
+        .canvas-stage canvas {
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .canvas-stage img {
+            position: relative;
+            z-index: 1;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .canvas-stage canvas {
+            position: absolute;
+            inset: 0;
+        }
+
+        .canvas-stage .canvas-container {
+            position: absolute !important;
+            inset: 0;
+            z-index: 2;
+        }
+
+        .canvas-stage .canvas-container canvas {
+            position: absolute !important;
+            inset: 0;
+        }
+
+        .canvas-viewport.drawing-active .canvas-stage .canvas-container,
+        .canvas-viewport.drawing-active .canvas-stage .upper-canvas {
+            cursor: crosshair;
+        }
+
+        .frame-status,
+        .frame-error {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 14px;
+            padding: 20px;
+            text-align: center;
+            background: rgba(10, 17, 27, 0.62);
+            color: #eff5ff;
+            z-index: 6;
+        }
+
+        .frame-status.hidden,
+        .frame-error.hidden {
+            display: none;
+        }
+
+        .frame-error .btn {
+            min-width: 120px;
+        }
+
+        .region-panel {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .region-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 12px;
+            margin-bottom: 14px;
+            flex: 0 0 auto;
+        }
+
+        .region-panel-title {
+            margin: 0;
+            font-size: 18px;
+            color: #e6f7ff;
+        }
+
+        .region-panel-count {
+            font-size: 13px;
+            color: rgba(214, 231, 255, 0.6);
+        }
+
+        .region-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            min-height: 0;
+            padding-right: 4px;
+        }
+
+        .region-empty {
+            padding: 26px 14px;
+            border: 1px dashed rgba(0, 162, 255, 0.22);
+            border-radius: 14px;
+            text-align: center;
+            color: rgba(214, 231, 255, 0.6);
+            font-size: 14px;
+        }
+
+        .region-item {
+            border: 1px solid rgba(0, 162, 255, 0.16);
+            border-radius: 14px;
+            padding: 14px;
+            background: linear-gradient(180deg, rgba(7, 18, 36, 0.95) 0%, rgba(10, 24, 48, 0.88) 100%);
+            cursor: pointer;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        .region-item:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 22px rgba(43, 67, 106, 0.08);
+        }
+
+        .region-item.active {
+            border-color: rgba(0, 212, 255, 0.28);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.10);
+        }
+
+        .region-item-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #e6f7ff;
+            margin-bottom: 6px;
+            word-break: break-all;
+        }
+
+        .region-item-meta {
+            font-size: 13px;
+            color: rgba(214, 231, 255, 0.6);
+            line-height: 1.6;
+        }
+
+        .region-item-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .region-action {
+            flex: 1;
+            min-height: 34px;
+            border-radius: 9px;
+            border: 1px solid rgba(0, 162, 255, 0.16);
+            background: rgba(5, 16, 32, 0.82);
+            color: #e6f7ff;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .region-action.delete {
+            color: #c63f31;
+        }
+
+        .notice-bar {
+            margin-bottom: 14px;
+            border-radius: 14px;
+            padding: 12px 14px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .notice-bar.info {
+            background: rgba(0, 212, 255, 0.08);
+            border: 1px solid rgba(0, 162, 255, 0.22);
+            color: #bfefff;
+        }
+
+        .notice-bar.warning {
+            background: rgba(255, 191, 95, 0.08);
+            border: 1px solid rgba(255, 191, 95, 0.22);
+            color: #ffd98a;
+        }
+
+        .notice-bar.hidden {
+            display: none;
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 18px;
+            right: 18px;
+            z-index: 10050;
+        }
+
+        .toast-item {
+            background: rgba(11, 18, 29, 0.95);
+            color: #eff5ff;
+            border: 1px solid rgba(56, 129, 241, 0.48);
+            border-radius: 10px;
+            padding: 12px 14px;
+            min-width: 260px;
+            margin-bottom: 10px;
+            box-shadow: 0 12px 28px rgba(9, 14, 24, 0.28);
+        }
+
+        .toast-item.success {
+            border-color: rgba(19, 165, 93, 0.48);
+        }
+
+        .toast-item.error {
+            border-color: rgba(208, 70, 70, 0.56);
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(7, 11, 18, 0.52);
+            z-index: 10020;
+            padding: 20px;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-card {
+            width: min(560px, 100%);
+            background: linear-gradient(145deg, rgba(8, 20, 40, 0.96), rgba(10, 26, 50, 0.88));
+            border-radius: 18px;
+            border: 1px solid rgba(0, 162, 255, 0.18);
+            box-shadow: 0 28px 52px rgba(0, 0, 0, 0.34);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 18px 22px;
+            border-bottom: 1px solid #e8eef6;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #00d4ff;
+            margin: 0;
+        }
+
+        .modal-close {
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            border: none;
+            background: rgba(5, 16, 32, 0.82);
+            color: rgba(214, 231, 255, 0.72);
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .modal-body {
+            padding: 22px;
+        }
+
+        .field {
+            margin-bottom: 18px;
+        }
+
+        .field.hidden {
+            display: none;
+        }
+
+        .field label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            color: rgba(214, 231, 255, 0.72);
+        }
+
+        .field input,
+        .field select {
+            width: 100%;
+            min-height: 44px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 162, 255, 0.16);
+            padding: 0 14px;
+            font-size: 14px;
+            color: #e6f7ff;
+            background: rgba(5, 16, 32, 0.82);
+        }
+
+        .field input[readonly] {
+            color: rgba(230, 247, 255, 0.82);
+            background: rgba(8, 20, 40, 0.92);
+            cursor: default;
+        }
+
+        .field-tip {
+            margin-top: 8px;
+            color: rgba(214, 231, 255, 0.6);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .field-tip.hidden {
+            display: none;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 18px 22px 22px;
+            border-top: 1px solid #e8eef6;
+        }
+
+        @media (max-width: 1080px) {
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+
+            .page-card {
+                height: calc(100vh - 24px);
+                padding: 14px;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .page-shell {
+                padding: 12px;
+            }
+
+            .page-card {
+                height: calc(100vh - 24px);
+                padding: 12px;
+            }
+
+            .page-header,
+            .canvas-topbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .header-actions,
+            .toolbar,
+            .region-item-actions {
+                width: 100%;
+            }
+
+            .header-actions .btn,
+            .toolbar .btn,
+            .region-action {
+                width: 100%;
+            }
+
+            .workspace {
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="page-shell">
+        <div class="page-card">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">编辑区域</h1>
+                    <div class="page-subtitle" id="taskSummary">正在加载任务信息...</div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" type="button" onclick="goBack()">返回任务列表</button>
+                    <button class="btn btn-secondary" type="button" onclick="refreshFrame()">刷新底图</button>
+                    <button class="btn btn-primary" type="button" id="saveButton" onclick="saveRegions()">保存</button>
+                </div>
+            </div>
+
+            <div class="notice-bar info hidden" id="pageNotice"></div>
+            <div class="notice-bar warning hidden" id="readonlyNotice"></div>
+
+            <div class="toolbar">
+                <button class="btn btn-tool" type="button" id="polygonToolButton" onclick="activatePolygonTool()">多边形</button>
+                <button class="btn btn-tool" type="button" id="undoButton" onclick="undoDraftPoint()">撤销</button>
+                <button class="btn btn-tool" type="button" id="clearButton" onclick="clearDraftPolygon()">清空当前</button>
+                <button class="btn btn-tool" type="button" onclick="toggleRegionPanel()">区域列表</button>
+            </div>
+
+            <div class="workspace" id="workspace">
+                <section class="canvas-card">
+                    <div class="canvas-topbar">
+                        <h2>原始流画面</h2>
+                        <div class="canvas-hint" id="canvasHint">等待底图加载完成后开始绘制。</div>
+                    </div>
+
+                    <div class="canvas-viewport" id="canvasViewport">
+                        <div class="frame-status hidden" id="frameLoading"></div>
+                        <div class="frame-error hidden" id="frameError">
+                            <div id="frameErrorText">抓图失败，请稍后重试。</div>
+                            <button class="btn btn-primary" type="button" onclick="refreshFrame()">重试</button>
+                        </div>
+                        <div class="canvas-stage" id="canvasStage">
+                            <img id="frameImage" alt="任务区域底图">
+                            <canvas id="regionCanvas"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <aside class="region-panel" id="regionPanel">
+                    <div class="region-panel-header">
+                        <h2 class="region-panel-title">区域列表</h2>
+                        <div class="region-panel-count" id="regionCount">0 个区域</div>
+                    </div>
+                    <div class="region-empty" id="regionEmpty">还没有配置任何区域，先在画面上绘制一个多边形吧。</div>
+                    <div class="region-list" id="regionList"></div>
+                </aside>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="regionModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2 class="modal-title" id="regionModalTitle">设置区域</h2>
+                <button class="modal-close" type="button" onclick="closeRegionModal(false)">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="field">
+                    <label for="regionLabelInput">标识</label>
+                    <input id="regionLabelInput" type="text" maxlength="60" placeholder="例如：入口兴趣区">
+                </div>
+                <div class="field">
+                    <label for="regionTypeInput">区域类型</label>
+                    <select id="regionTypeInput">
+                        <option value="interest">兴趣区域</option>
+                        <option value="exclusive">专用算法区域</option>
+                    </select>
+                    <div class="field-tip hidden" id="regionTypeTip"></div>
+                </div>
+                <div class="field" id="regionOwnerField">
+                    <label for="regionOwnerInput">归属任务</label>
+                    <input id="regionOwnerInput" type="text" readonly>
+                    <div class="field-tip hidden" id="regionOwnerTip"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" type="button" onclick="closeRegionModal(false)">取消</button>
+                <button class="btn btn-primary" type="button" onclick="submitRegionModal()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const REGION_TYPE_LABELS = {
+            interest: '兴趣区域',
+            exclusive: '专用算法区域'
+        };
+
+        const REGION_EDITOR_COLORS = {
+            activeFill: 'rgba(0, 212, 255, 0.24)',
+            inactiveFill: 'rgba(0, 212, 255, 0.12)',
+            activeStroke: '#7be8ff',
+            stroke: '#00d4ff',
+            labelFill: '#06263a',
+            activeLabelBackground: 'rgba(191, 239, 255, 0.96)',
+            labelBackground: 'rgba(0, 212, 255, 0.26)',
+            draftFill: 'rgba(0, 212, 255, 0.18)',
+            pendingFill: 'rgba(0, 212, 255, 0.16)',
+            markerFill: '#f4fdff',
+            markerStroke: '#00d4ff'
+        };
+
+        const ALGORITHM_LABELS = {
+            region_intrusion: '区域入侵',
+            person_detection: '人员检测',
+            face_recognition: '人脸识别',
+            registered_person_tracking: '登记人员追踪',
+            '明烟明火': '明烟明火',
+            '打架检测': '打架检测',
+            '跌倒检测': '跌倒检测'
+        };
+
+        const state = {
+            taskId: 0,
+            task: null,
+            regions: [],
+            selectedRegionId: null,
+            canvas: null,
+            canvasObjects: [],
+            draftPoints: [],
+            draftPreviewLine: null,
+            draftMarkers: [],
+            pendingPolygonObject: null,
+            pendingRegionData: null,
+            editingRegionId: null,
+            activeTool: '',
+            modalBackdropIgnoreUntil: 0,
+            regionPanelVisible: true,
+            frameLoaded: false,
+            currentFrameObjectUrl: '',
+            frameRequestController: null,
+            frameNaturalWidth: 0,
+            frameNaturalHeight: 0,
+            frameDisplayWidth: 0,
+            frameDisplayHeight: 0
+        };
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const item = document.createElement('div');
+            item.className = `toast-item ${type}`;
+            item.textContent = message;
+            container.appendChild(item);
+            window.setTimeout(() => {
+                item.remove();
+            }, 2600);
+        }
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function decodeRegionId(encodedId) {
+            try {
+                return decodeURIComponent(encodedId);
+            } catch (error) {
+                return encodedId;
+            }
+        }
+
+        function getRegionTypeLabel(regionType) {
+            return REGION_TYPE_LABELS[regionType] || regionType || '-';
+        }
+
+        function getAlgorithmLabel(algorithm) {
+            return ALGORITHM_LABELS[algorithm] || algorithm || '-';
+        }
+
+        function getCurrentTaskAlgorithm() {
+            return state.task && state.task.algorithm ? state.task.algorithm : '';
+        }
+
+        function getCurrentTaskNumber() {
+            return state.task && state.task.taskNumber ? state.task.taskNumber : '';
+        }
+
+        function getRegionOwnerAlgorithm(region) {
+            return region && region.ownerAlgorithm
+                ? region.ownerAlgorithm
+                : getCurrentTaskAlgorithm();
+        }
+
+        function getRegionOwnerTaskNumber(region) {
+            return region && region.ownerTaskNumber
+                ? region.ownerTaskNumber
+                : getCurrentTaskNumber();
+        }
+
+        function buildRegionOwnerSummary(region) {
+            const taskNumber = getRegionOwnerTaskNumber(region) || '-';
+            const algorithmLabel = getAlgorithmLabel(getRegionOwnerAlgorithm(region));
+            return `任务 ${taskNumber} / ${algorithmLabel}`;
+        }
+
+        function shouldShowRegionOwnerField() {
+            return document.getElementById('regionTypeInput').value === 'exclusive';
+        }
+
+        function syncRegionTypeState(region) {
+            const ownerField = document.getElementById('regionOwnerField');
+            if (ownerField) {
+                ownerField.classList.toggle('hidden', !shouldShowRegionOwnerField());
+            }
+            updateRegionModalOwnership(region);
+        }
+
+        function updateRegionModalOwnership(region) {
+            const ownerInput = document.getElementById('regionOwnerInput');
+            if (ownerInput) {
+                ownerInput.value = buildRegionOwnerSummary(region);
+            }
+        }
+
+        function getRegionVisualStyle(regionType, isActive) {
+            return {
+                fill: isActive ? REGION_EDITOR_COLORS.activeFill : REGION_EDITOR_COLORS.inactiveFill,
+                stroke: isActive ? REGION_EDITOR_COLORS.activeStroke : REGION_EDITOR_COLORS.stroke,
+                labelFill: REGION_EDITOR_COLORS.labelFill,
+                labelBackground: isActive
+                    ? REGION_EDITOR_COLORS.activeLabelBackground
+                    : REGION_EDITOR_COLORS.labelBackground
+            };
+        }
+
+        function generateRegionId() {
+            return `region_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
+        }
+
+        function isEditableTask() {
+            return !!(state.task && state.task.editable);
+        }
+
+        function syncCanvasCursor() {
+            if (!state.canvas) {
+                return;
+            }
+            const isDrawing = state.activeTool === 'polygon' && isEditableTask() && state.frameLoaded;
+            state.canvas.defaultCursor = isDrawing ? 'crosshair' : 'default';
+            if (state.canvas.upperCanvasEl) {
+                state.canvas.upperCanvasEl.style.cursor = isDrawing ? 'crosshair' : 'default';
+            }
+            document.getElementById('canvasViewport').classList.toggle('drawing-active', isDrawing);
+        }
+
+        function setActiveTool(toolName) {
+            state.activeTool = toolName || '';
+            document.getElementById('polygonToolButton').classList.toggle('active', state.activeTool === 'polygon');
+            syncCanvasCursor();
+            updateCanvasHint();
+        }
+
+        function parseTaskId() {
+            const taskId = Number(new URLSearchParams(window.location.search).get('taskId'));
+            return Number.isFinite(taskId) && taskId > 0 ? taskId : 0;
+        }
+
+        function activatePolygonTool() {
+            if (!isEditableTask()) {
+                return;
+            }
+            if (!state.frameLoaded) {
+                showToast('请等待底图加载完成后再开始绘制。', 'info');
+                return;
+            }
+            if (state.pendingRegionData) {
+                showToast('当前有待确认的区域，请先完成设置或取消。', 'info');
+                return;
+            }
+            if (state.activeTool === 'polygon') {
+                if (state.draftPoints.length) {
+                    showToast('当前有未完成的多边形，请先双击结束、撤销或清空当前。', 'info');
+                    return;
+                }
+                setActiveTool('');
+                return;
+            }
+            setActiveTool('polygon');
+        }
+
+        function updateCanvasHint() {
+            const hint = document.getElementById('canvasHint');
+            if (!state.frameLoaded) {
+                hint.textContent = '等待底图加载完成后开始绘制。';
+                return;
+            }
+            if (!isEditableTask()) {
+                hint.textContent = '当前算法暂不支持编辑区域，仅保留查看能力。';
+                return;
+            }
+            if (state.pendingRegionData) {
+                hint.textContent = '当前区域已结束绘制，请先在弹窗中填写信息，或取消后重新绘制。';
+                return;
+            }
+            if (state.activeTool !== 'polygon') {
+                hint.textContent = '点击“多边形”按钮后开始绘制区域。';
+                return;
+            }
+            if (state.draftPoints.length === 0) {
+                hint.textContent = '已进入多边形模式，单击画面确定起点并继续加点，双击结束当前多边形。';
+                return;
+            }
+            hint.textContent = `已添加 ${state.draftPoints.length} 个点，继续单击加点，双击结束。`;
+        }
+
+        function setReadonlyNotice(message) {
+            const notice = document.getElementById('readonlyNotice');
+            if (!message) {
+                notice.classList.add('hidden');
+                notice.textContent = '';
+                return;
+            }
+            notice.textContent = message;
+            notice.classList.remove('hidden');
+        }
+
+        function updateToolbarAvailability() {
+            const disabled = !isEditableTask();
+            document.getElementById('saveButton').disabled = disabled;
+            document.getElementById('undoButton').disabled = disabled;
+            document.getElementById('clearButton').disabled = disabled;
+            document.getElementById('polygonToolButton').disabled = disabled;
+            if (disabled) {
+                setActiveTool('');
+            } else {
+                syncCanvasCursor();
+            }
+        }
+
+        function setFrameLoading(isLoading) {
+            document.getElementById('frameLoading').classList.add('hidden');
+        }
+
+        function showFrameError(message) {
+            document.getElementById('frameErrorText').textContent = message;
+            document.getElementById('frameError').classList.remove('hidden');
+        }
+
+        function hideFrameError() {
+            document.getElementById('frameError').classList.add('hidden');
+        }
+
+        function clearDraftPreview() {
+            if (state.draftPreviewLine) {
+                state.canvas.remove(state.draftPreviewLine);
+                state.draftPreviewLine = null;
+            }
+            state.draftMarkers.forEach(marker => state.canvas.remove(marker));
+            state.draftMarkers = [];
+        }
+
+        function clearPendingPolygonObject() {
+            if (state.pendingPolygonObject) {
+                state.canvas.remove(state.pendingPolygonObject);
+                state.pendingPolygonObject = null;
+            }
+        }
+
+        function clearPendingPolygon() {
+            clearPendingPolygonObject();
+            state.pendingRegionData = null;
+        }
+
+        function clearDraftPolygon(shouldRender = true) {
+            state.draftPoints = [];
+            clearDraftPreview();
+            clearPendingPolygon();
+            if (shouldRender) {
+                state.canvas.renderAll();
+            }
+            updateCanvasHint();
+        }
+
+        function cloneCanvasPoints(points) {
+            return points.map(point => ({ x: point.x, y: point.y }));
+        }
+
+        function clampCanvasPoint(point) {
+            return {
+                x: Math.max(0, Math.min(point.x, state.frameDisplayWidth)),
+                y: Math.max(0, Math.min(point.y, state.frameDisplayHeight))
+            };
+        }
+
+        function canvasPointToFramePoint(point) {
+            return {
+                x: Math.round((point.x / state.frameDisplayWidth) * state.frameNaturalWidth),
+                y: Math.round((point.y / state.frameDisplayHeight) * state.frameNaturalHeight)
+            };
+        }
+
+        function framePointToCanvasPoint(point) {
+            return {
+                x: (point.x / state.frameNaturalWidth) * state.frameDisplayWidth,
+                y: (point.y / state.frameNaturalHeight) * state.frameDisplayHeight
+            };
+        }
+
+        function removeCanvasObjects() {
+            state.canvasObjects.forEach(obj => state.canvas.remove(obj));
+            state.canvasObjects = [];
+        }
+
+        function renderDraftPreview(previewPoint) {
+            clearDraftPreview();
+            if (!state.draftPoints.length) {
+                state.canvas.renderAll();
+                return;
+            }
+
+            const previewPoints = cloneCanvasPoints(state.draftPoints);
+            if (previewPoint) {
+                previewPoints.push(clampCanvasPoint(previewPoint));
+            }
+
+            const previewShapeOptions = {
+                fill: previewPoints.length >= 3 ? REGION_EDITOR_COLORS.draftFill : 'rgba(0, 0, 0, 0)',
+                stroke: REGION_EDITOR_COLORS.stroke,
+                strokeWidth: 2,
+                strokeDashArray: previewPoint ? [8, 6] : null,
+                selectable: false,
+                evented: false,
+                objectCaching: false
+            };
+            state.draftPreviewLine = previewPoints.length >= 3
+                ? new fabric.Polygon(previewPoints, previewShapeOptions)
+                : new fabric.Polyline(previewPoints, previewShapeOptions);
+            state.canvas.add(state.draftPreviewLine);
+
+            state.draftMarkers = state.draftPoints.map(point => {
+                const marker = new fabric.Circle({
+                    left: point.x,
+                    top: point.y,
+                    radius: 4,
+                    originX: 'center',
+                    originY: 'center',
+                    fill: REGION_EDITOR_COLORS.markerFill,
+                    stroke: REGION_EDITOR_COLORS.markerStroke,
+                    strokeWidth: 2,
+                    selectable: false,
+                    evented: false
+                });
+                state.canvas.add(marker);
+                return marker;
+            });
+
+            state.canvas.renderAll();
+        }
+
+        function renderPendingPolygon() {
+            clearPendingPolygonObject();
+            if (!state.pendingRegionData) {
+                state.canvas.renderAll();
+                return;
+            }
+
+            const polygonPoints = state.pendingRegionData.framePoints && state.pendingRegionData.framePoints.length
+                ? state.pendingRegionData.framePoints.map(framePointToCanvasPoint)
+                : (state.pendingRegionData.canvasPoints || []);
+            if (!polygonPoints.length) {
+                return;
+            }
+
+            state.pendingPolygonObject = new fabric.Polygon(polygonPoints, {
+                fill: REGION_EDITOR_COLORS.pendingFill,
+                stroke: REGION_EDITOR_COLORS.stroke,
+                strokeWidth: 2,
+                selectable: false,
+                evented: false,
+                objectCaching: false
+            });
+            state.canvas.add(state.pendingPolygonObject);
+            state.canvas.renderAll();
+        }
+
+        function renderRegionOverlays() {
+            removeCanvasObjects();
+            clearDraftPreview();
+
+            if (!state.frameLoaded || !state.frameNaturalWidth || !state.frameNaturalHeight) {
+                clearPendingPolygonObject();
+                state.canvas.renderAll();
+                return;
+            }
+
+            state.regions.forEach(region => {
+                const canvasPoints = region.points.map(framePointToCanvasPoint);
+                const isActive = region.id === state.selectedRegionId;
+                const visualStyle = getRegionVisualStyle(region.regionType, isActive);
+                const polygon = new fabric.Polygon(canvasPoints, {
+                    fill: visualStyle.fill,
+                    stroke: visualStyle.stroke,
+                    strokeWidth: isActive ? 3 : 2,
+                    selectable: false,
+                    evented: true,
+                    objectCaching: false,
+                    hoverCursor: 'pointer'
+                });
+                polygon.regionId = region.id;
+                polygon.on('mousedown', () => selectRegion(region.id));
+
+                const anchorPoint = canvasPoints[0] || { x: 10, y: 10 };
+                const label = new fabric.Text(region.label, {
+                    left: Math.max(8, anchorPoint.x + 10),
+                    top: Math.max(8, anchorPoint.y - 26),
+                    fontSize: 14,
+                    fontFamily: 'Microsoft YaHei',
+                    fontWeight: '600',
+                    fill: visualStyle.labelFill,
+                    backgroundColor: visualStyle.labelBackground,
+                    selectable: false,
+                    evented: false
+                });
+
+                state.canvas.add(polygon);
+                state.canvas.add(label);
+                state.canvasObjects.push(polygon, label);
+            });
+
+            renderPendingPolygon();
+            renderDraftPreview();
+        }
+
+        function renderRegionList() {
+            const list = document.getElementById('regionList');
+            const empty = document.getElementById('regionEmpty');
+            document.getElementById('regionCount').textContent = `${state.regions.length} 个区域`;
+
+            if (!state.regions.length) {
+                list.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+
+            empty.style.display = 'none';
+            list.innerHTML = state.regions.map(region => {
+                const encodedId = encodeURIComponent(region.id);
+                const readonlyAttr = isEditableTask() ? '' : 'disabled';
+                return `
+                <div class="region-item ${region.id === state.selectedRegionId ? 'active' : ''}" onclick="selectRegion(decodeRegionId('${encodedId}'))">
+                    <div class="region-item-title">${escapeHtml(region.label)}</div>
+                    <div class="region-item-meta">类型：${escapeHtml(getRegionTypeLabel(region.regionType))}</div>
+                    <div class="region-item-meta">归属：${escapeHtml(buildRegionOwnerSummary(region))}</div>
+                    <div class="region-item-meta">点数：${region.points.length}，底图：${region.frameWidth} × ${region.frameHeight}</div>
+                    <div class="region-item-actions">
+                        <button class="region-action" type="button" onclick="event.stopPropagation(); selectRegion(decodeRegionId('${encodedId}'))">查看</button>
+                        <button class="region-action" type="button" onclick="event.stopPropagation(); editRegionMeta(decodeRegionId('${encodedId}'))" ${readonlyAttr}>编辑信息</button>
+                        <button class="region-action delete" type="button" onclick="event.stopPropagation(); deleteRegion(decodeRegionId('${encodedId}'))" ${readonlyAttr}>删除</button>
+                    </div>
+                </div>
+            `;
+            }).join('');
+        }
+
+        function selectRegion(regionId) {
+            state.selectedRegionId = regionId;
+            renderRegionList();
+            renderRegionOverlays();
+        }
+
+        function deleteRegion(regionId) {
+            if (!isEditableTask()) {
+                return;
+            }
+            const region = state.regions.find(item => item.id === regionId);
+            if (!region) {
+                return;
+            }
+            if (!window.confirm(`确定删除区域“${region.label}”吗？`)) {
+                return;
+            }
+            state.regions = state.regions.filter(item => item.id !== regionId);
+            if (state.selectedRegionId === regionId) {
+                state.selectedRegionId = state.regions.length ? state.regions[0].id : null;
+            }
+            renderRegionList();
+            renderRegionOverlays();
+            showToast('区域已删除，保存后生效。', 'info');
+        }
+
+        function editRegionMeta(regionId) {
+            if (!isEditableTask()) {
+                return;
+            }
+            const region = state.regions.find(item => item.id === regionId);
+            if (!region) {
+                return;
+            }
+            state.editingRegionId = regionId;
+            state.pendingRegionData = null;
+            document.getElementById('regionModalTitle').textContent = '编辑区域信息';
+            document.getElementById('regionLabelInput').value = region.label || '';
+            document.getElementById('regionTypeInput').value = region.regionType || 'interest';
+            syncRegionTypeState(region);
+            document.getElementById('regionModal').classList.add('show');
+        }
+
+        function openCreateRegionModal() {
+            state.editingRegionId = null;
+            state.modalBackdropIgnoreUntil = Date.now() + 320;
+            document.getElementById('regionModalTitle').textContent = '设置区域';
+            document.getElementById('regionLabelInput').value = '';
+            document.getElementById('regionTypeInput').value = 'interest';
+            syncRegionTypeState(null);
+            document.getElementById('regionModal').classList.add('show');
+            window.setTimeout(() => document.getElementById('regionLabelInput').focus(), 0);
+        }
+
+        function closeRegionModal(keepPendingRegion) {
+            document.getElementById('regionModal').classList.remove('show');
+            document.getElementById('regionLabelInput').value = '';
+            document.getElementById('regionTypeInput').value = 'interest';
+            syncRegionTypeState(null);
+            state.modalBackdropIgnoreUntil = 0;
+
+            if (!keepPendingRegion && !state.editingRegionId) {
+                clearPendingPolygon();
+                renderRegionOverlays();
+            }
+            state.editingRegionId = null;
+            updateCanvasHint();
+        }
+
+        function submitRegionModal() {
+            const label = document.getElementById('regionLabelInput').value.trim();
+            const regionType = document.getElementById('regionTypeInput').value;
+
+            if (!label) {
+                showToast('请填写区域标识。', 'error');
+                return;
+            }
+
+            if (!REGION_TYPE_LABELS[regionType]) {
+                showToast('请选择有效的区域类型。', 'error');
+                return;
+            }
+
+            if (state.editingRegionId) {
+                const region = state.regions.find(item => item.id === state.editingRegionId);
+                if (!region) {
+                    closeRegionModal(false);
+                    return;
+                }
+                region.label = label;
+                region.regionType = regionType;
+                region.ownerTaskId = state.task ? state.task.id : region.ownerTaskId;
+                region.ownerTaskNumber = getCurrentTaskNumber();
+                region.ownerAlgorithm = getCurrentTaskAlgorithm();
+                region.updatedAtMs = Date.now();
+                state.selectedRegionId = region.id;
+                closeRegionModal(true);
+                renderRegionList();
+                renderRegionOverlays();
+                showToast('区域信息已更新。', 'success');
+                return;
+            }
+
+            if (!state.pendingRegionData || !state.pendingRegionData.framePoints.length) {
+                showToast('当前没有待保存的区域。', 'error');
+                closeRegionModal(false);
+                return;
+            }
+
+            const now = Date.now();
+            const newRegion = {
+                id: generateRegionId(),
+                label,
+                regionType,
+                shape: 'polygon',
+                ownerTaskId: state.task ? state.task.id : 0,
+                ownerTaskNumber: getCurrentTaskNumber(),
+                ownerAlgorithm: getCurrentTaskAlgorithm(),
+                frameWidth: state.frameNaturalWidth,
+                frameHeight: state.frameNaturalHeight,
+                points: state.pendingRegionData.framePoints.map(point => ({ x: point.x, y: point.y })),
+                createdAtMs: now,
+                updatedAtMs: now
+            };
+
+            state.regions.push(newRegion);
+            state.selectedRegionId = newRegion.id;
+            closeRegionModal(true);
+            clearPendingPolygon();
+            renderRegionList();
+            renderRegionOverlays();
+            showToast('区域已加入列表，点击保存后生效。', 'success');
+        }
+
+        function undoDraftPoint() {
+            if (!isEditableTask()) {
+                return;
+            }
+            if (!state.draftPoints.length) {
+                showToast('当前没有可撤销的点。', 'info');
+                return;
+            }
+            state.draftPoints.pop();
+            renderDraftPreview();
+            updateCanvasHint();
+        }
+
+        function collapseDuplicateTrailingPoint() {
+            if (state.draftPoints.length < 2) {
+                return;
+            }
+            const lastPoint = state.draftPoints[state.draftPoints.length - 1];
+            const prevPoint = state.draftPoints[state.draftPoints.length - 2];
+            const distance = Math.hypot(lastPoint.x - prevPoint.x, lastPoint.y - prevPoint.y);
+            if (distance < 6) {
+                state.draftPoints.pop();
+            }
+        }
+
+        function finalizeDraftPolygon() {
+            if (!isEditableTask()) {
+                return;
+            }
+            collapseDuplicateTrailingPoint();
+            if (state.draftPoints.length < 3) {
+                showToast('多边形至少需要 3 个点。', 'error');
+                renderDraftPreview();
+                updateCanvasHint();
+                return;
+            }
+
+            const framePoints = state.draftPoints.map(canvasPointToFramePoint).map(point => ({
+                x: Math.max(0, Math.min(point.x, state.frameNaturalWidth - 1)),
+                y: Math.max(0, Math.min(point.y, state.frameNaturalHeight - 1))
+            }));
+
+            state.pendingRegionData = {
+                canvasPoints: cloneCanvasPoints(state.draftPoints),
+                framePoints
+            };
+
+            state.draftPoints = [];
+            setActiveTool('');
+            clearDraftPreview();
+            renderPendingPolygon();
+            updateCanvasHint();
+            openCreateRegionModal();
+        }
+
+        function handleCanvasMouseDown(opt) {
+            if (!isEditableTask() || !state.frameLoaded || !state.canvas) {
+                return;
+            }
+            if (opt.target && opt.target.regionId) {
+                selectRegion(opt.target.regionId);
+                return;
+            }
+            if (state.activeTool !== 'polygon') {
+                return;
+            }
+            if (state.editingRegionId || state.pendingRegionData) {
+                return;
+            }
+
+            const pointer = clampCanvasPoint(state.canvas.getPointer(opt.e));
+            state.draftPoints.push(pointer);
+            renderDraftPreview();
+            updateCanvasHint();
+        }
+
+        function handleCanvasMouseMove(opt) {
+            if (!isEditableTask() || !state.frameLoaded || state.activeTool !== 'polygon' || !state.draftPoints.length || state.pendingRegionData) {
+                return;
+            }
+            const pointer = clampCanvasPoint(state.canvas.getPointer(opt.e));
+            renderDraftPreview(pointer);
+        }
+
+        function goBack() {
+            cancelPendingFrameRequest();
+            window.location.replace('task.html');
+        }
+
+        function toggleRegionPanel() {
+            state.regionPanelVisible = !state.regionPanelVisible;
+            document.getElementById('workspace').classList.toggle('panel-hidden', !state.regionPanelVisible);
+            window.requestAnimationFrame(() => {
+                if (state.frameLoaded) {
+                    layoutStage();
+                }
+            });
+        }
+
+        function buildTaskSummary() {
+            if (!state.task) {
+                return '任务信息加载失败';
+            }
+            const statusText = state.task.status === 'running' ? '运行中' : '已停止';
+            return `任务编号：${state.task.taskNumber || '-'} ｜ 算法：${getAlgorithmLabel(state.task.algorithm)} ｜ 状态：${statusText}`;
+        }
+
+        function applyTaskContext() {
+            document.getElementById('taskSummary').textContent = buildTaskSummary();
+            if (isEditableTask()) {
+                setReadonlyNotice('');
+            } else if (state.task) {
+                setReadonlyNotice('当前算法暂不支持配置区域。页面保留查看入口，但“配置区域”写入能力仅对登记人员追踪和区域入侵算法开放。');
+            }
+            syncRegionTypeState(null);
+            updateToolbarAvailability();
+            updateCanvasHint();
+            renderRegionList();
+        }
+
+        async function loadTaskRegions() {
+            const response = await axios.get(`/api/tasks/${state.taskId}/regions`);
+            if (!response.data || response.data.status !== 'success') {
+                throw new Error((response.data && response.data.message) || '加载区域信息失败');
+            }
+            state.task = response.data.task || null;
+            state.regions = Array.isArray(response.data.regions) ? response.data.regions : [];
+            state.selectedRegionId = state.regions.length ? state.regions[0].id : null;
+            applyTaskContext();
+        }
+
+        function revokeFrameObjectUrl() {
+            if (state.currentFrameObjectUrl) {
+                URL.revokeObjectURL(state.currentFrameObjectUrl);
+                state.currentFrameObjectUrl = '';
+            }
+        }
+
+        function cancelPendingFrameRequest() {
+            if (state.frameRequestController) {
+                state.frameRequestController.abort();
+                state.frameRequestController = null;
+            }
+        }
+
+        function layoutStage() {
+            if (!state.frameNaturalWidth || !state.frameNaturalHeight) {
+                return;
+            }
+
+            const draftFramePoints = state.draftPoints.length && state.frameDisplayWidth && state.frameDisplayHeight
+                ? state.draftPoints.map(canvasPointToFramePoint)
+                : [];
+            const viewport = document.getElementById('canvasViewport');
+            const stage = document.getElementById('canvasStage');
+            const image = document.getElementById('frameImage');
+            const canvasElement = document.getElementById('regionCanvas');
+
+            const maxWidth = Math.max(280, viewport.clientWidth - 28);
+            const maxHeight = Math.max(220, viewport.clientHeight - 28);
+            const scale = Math.min(maxWidth / state.frameNaturalWidth, maxHeight / state.frameNaturalHeight, 1);
+
+            state.frameDisplayWidth = Math.max(1, Math.round(state.frameNaturalWidth * scale));
+            state.frameDisplayHeight = Math.max(1, Math.round(state.frameNaturalHeight * scale));
+
+            stage.style.width = `${state.frameDisplayWidth}px`;
+            stage.style.height = `${state.frameDisplayHeight}px`;
+            image.style.width = `${state.frameDisplayWidth}px`;
+            image.style.height = `${state.frameDisplayHeight}px`;
+            canvasElement.width = state.frameDisplayWidth;
+            canvasElement.height = state.frameDisplayHeight;
+            canvasElement.style.width = `${state.frameDisplayWidth}px`;
+            canvasElement.style.height = `${state.frameDisplayHeight}px`;
+
+            state.canvas.setWidth(state.frameDisplayWidth);
+            state.canvas.setHeight(state.frameDisplayHeight);
+            if (state.canvas.wrapperEl) {
+                state.canvas.wrapperEl.style.width = `${state.frameDisplayWidth}px`;
+                state.canvas.wrapperEl.style.height = `${state.frameDisplayHeight}px`;
+                state.canvas.wrapperEl.style.left = '0';
+                state.canvas.wrapperEl.style.top = '0';
+            }
+            if (state.canvas.lowerCanvasEl) {
+                state.canvas.lowerCanvasEl.style.width = `${state.frameDisplayWidth}px`;
+                state.canvas.lowerCanvasEl.style.height = `${state.frameDisplayHeight}px`;
+            }
+            if (state.canvas.upperCanvasEl) {
+                state.canvas.upperCanvasEl.style.width = `${state.frameDisplayWidth}px`;
+                state.canvas.upperCanvasEl.style.height = `${state.frameDisplayHeight}px`;
+            }
+            state.canvas.calcOffset();
+            if (draftFramePoints.length) {
+                state.draftPoints = draftFramePoints.map(framePointToCanvasPoint);
+            }
+            renderRegionOverlays();
+            state.canvas.renderAll();
+            syncCanvasCursor();
+        }
+
+        async function refreshFrame() {
+            if (!state.taskId) {
+                return;
+            }
+
+            cancelPendingFrameRequest();
+            const controller = new AbortController();
+            state.frameRequestController = controller;
+
+            setFrameLoading(true);
+            hideFrameError();
+            state.frameLoaded = false;
+            updateCanvasHint();
+
+            try {
+                const response = await fetch(`/api/tasks/${state.taskId}/regions/frame`, {
+                    method: 'GET',
+                    cache: 'no-store',
+                    signal: controller.signal
+                });
+                const contentType = String(response.headers.get('content-type') || '');
+                if (contentType.includes('application/json')) {
+                    const text = await response.text();
+                    let payload = null;
+                    try {
+                        payload = JSON.parse(text);
+                    } catch (error) {
+                        payload = null;
+                    }
+                    throw new Error((payload && payload.message) || '抓图失败');
+                }
+                if (!response.ok) {
+                    throw new Error(`抓图失败（${response.status}）`);
+                }
+
+                const frameBuffer = await response.arrayBuffer();
+                if (controller.signal.aborted) {
+                    return;
+                }
+
+                revokeFrameObjectUrl();
+                state.currentFrameObjectUrl = URL.createObjectURL(new Blob([frameBuffer], {
+                    type: contentType || 'image/jpeg'
+                }));
+
+                await new Promise((resolve, reject) => {
+                    const image = document.getElementById('frameImage');
+                    image.onload = () => resolve();
+                    image.onerror = () => reject(new Error('底图加载失败'));
+                    image.src = state.currentFrameObjectUrl;
+                });
+
+                const image = document.getElementById('frameImage');
+                state.frameNaturalWidth = image.naturalWidth;
+                state.frameNaturalHeight = image.naturalHeight;
+                state.frameLoaded = true;
+                setFrameLoading(false);
+                layoutStage();
+                updateCanvasHint();
+            } catch (error) {
+                if (error && error.name === 'AbortError') {
+                    return;
+                }
+                let message = error.message || '抓图失败，请稍后重试。';
+                setFrameLoading(false);
+                showFrameError(message);
+                showToast(message, 'error');
+            } finally {
+                if (state.frameRequestController === controller) {
+                    state.frameRequestController = null;
+                }
+            }
+        }
+
+        async function saveRegions() {
+            if (!isEditableTask()) {
+                return;
+            }
+
+            if (state.pendingRegionData) {
+                showToast('当前有未确认的区域，请先完成设置或取消。', 'error');
+                return;
+            }
+
+            try {
+                const response = await axios.put(`/api/tasks/${state.taskId}/regions`, {
+                    regions: state.regions
+                });
+                if (!response.data || response.data.status !== 'success') {
+                    throw new Error((response.data && response.data.message) || '保存失败');
+                }
+                state.regions = Array.isArray(response.data.regions) ? response.data.regions : [];
+                state.task = response.data.task || state.task;
+                if (!state.selectedRegionId && state.regions.length) {
+                    state.selectedRegionId = state.regions[0].id;
+                }
+                renderRegionList();
+                renderRegionOverlays();
+                if (response.data.restartRequired) {
+                    showToast('区域保存成功，当前任务需手动停止/启动后生效。', 'info');
+                } else {
+                    showToast('区域保存成功。', 'success');
+                }
+            } catch (error) {
+                const message = error.response && error.response.data && error.response.data.message
+                    ? error.response.data.message
+                    : (error.message || '保存失败');
+                showToast(message, 'error');
+            }
+        }
+
+        async function initializePage() {
+            state.taskId = parseTaskId();
+            if (!state.taskId) {
+                showToast('缺少任务 ID，无法进入区域编辑页。', 'error');
+                setReadonlyNotice('缺少有效的任务 ID，请从任务列表重新进入。');
+                updateToolbarAvailability();
+                return;
+            }
+
+            state.canvas = new fabric.Canvas('regionCanvas', {
+                selection: false,
+                preserveObjectStacking: true
+            });
+            state.canvas.on('mouse:down', handleCanvasMouseDown);
+            state.canvas.on('mouse:move', handleCanvasMouseMove);
+            state.canvas.upperCanvasEl.addEventListener('dblclick', event => {
+                event.preventDefault();
+                if (state.activeTool === 'polygon' && state.draftPoints.length) {
+                    finalizeDraftPolygon();
+                }
+            });
+            setActiveTool('');
+
+            document.getElementById('regionModal').addEventListener('click', event => {
+                if (Date.now() < state.modalBackdropIgnoreUntil) {
+                    return;
+                }
+                if (event.target === event.currentTarget) {
+                    closeRegionModal(false);
+                }
+            });
+
+            document.getElementById('regionTypeInput').addEventListener('change', () => {
+                const editingRegion = state.editingRegionId
+                    ? state.regions.find(item => item.id === state.editingRegionId) || null
+                    : null;
+                syncRegionTypeState(editingRegion);
+            });
+
+            window.addEventListener('resize', () => {
+                if (state.frameLoaded) {
+                    layoutStage();
+                }
+            });
+
+            try {
+                await loadTaskRegions();
+                await refreshFrame();
+            } catch (error) {
+                showToast(error.message || '页面初始化失败。', 'error');
+                showFrameError(error.message || '页面初始化失败。');
+            }
+        }
+
+        window.addEventListener('beforeunload', () => {
+            cancelPendingFrameRequest();
+            revokeFrameObjectUrl();
+        });
+        window.addEventListener('load', initializePage);
+    </script>
+</body>
+
+</html>

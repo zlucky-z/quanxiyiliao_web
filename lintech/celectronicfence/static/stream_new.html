@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实时预览 - 新版</title>
+    <script src="axios.min.js"></script>
+    <script src="fabric.min.js"></script>
+    <link rel="stylesheet" href="fontawesome-all.min.css">
+    <link rel="stylesheet" href="pcb-theme.css?v=20260323-black3">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background:
+                radial-gradient(circle at top, rgba(0, 162, 255, 0.18) 0%, rgba(0, 162, 255, 0) 34%),
+                linear-gradient(180deg, #07111f 0%, #0a1628 56%, #09111d 100%);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .stream-page {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: transparent;
+        }
+
+        /* 顶部工具栏 */
+        .stream-header {
+            background: linear-gradient(90deg, rgba(5, 16, 29, 0.98), rgba(8, 26, 46, 0.95));
+            padding: 12px 22px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            border-bottom: 1px solid rgba(0, 162, 255, 0.2);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.34);
+        }
+
+        .stream-header-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #00d4ff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.35);
+        }
+
+        .stream-mode-switch {
+            display: flex;
+            gap: 12px;
+            margin-left: auto;
+        }
+
+        .mode-btn {
+            min-height: 36px;
+            padding: 8px 16px;
+            border: 1px solid rgba(0, 162, 255, 0.22);
+            background: rgba(8, 20, 34, 0.82);
+            border-radius: 7px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: rgba(224, 240, 255, 0.76);
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(180deg, rgba(7, 26, 45, 0.98), rgba(12, 39, 64, 0.94));
+            color: #f4fbff;
+            border-color: rgba(0, 212, 255, 0.42);
+            box-shadow: inset 0 0 0 1px rgba(0, 212, 255, 0.14), 0 8px 18px rgba(2, 8, 20, 0.3);
+        }
+
+        .mode-btn:hover:not(.active) {
+            border-color: rgba(0, 212, 255, 0.34);
+            color: #eef8ff;
+            background: rgba(11, 28, 47, 0.92);
+        }
+
+        /* 主视频区域容器 */
+        .stream-main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 视频显示区域 */
+        .stream-video-area {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 合流视图（2x2四宫格） */
+        .stream-grid-view {
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 4px;
+            background: rgba(2, 7, 13, 0.98);
+            padding: 4px;
+        }
+
+        .stream-grid-view.hidden {
+            display: none;
+        }
+
+        .stream-grid-item {
+            position: relative;
+            background: linear-gradient(180deg, rgba(4, 10, 18, 0.98), rgba(6, 14, 24, 0.96));
+            border: 1px solid rgba(0, 162, 255, 0.08);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stream-grid-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .stream-grid-label {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            max-width: calc(100% - 84px);
+            background: linear-gradient(90deg, rgba(3, 16, 29, 0.94), rgba(7, 24, 42, 0.92));
+            color: #edf9ff;
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 10;
+            border: 1px solid rgba(0, 162, 255, 0.18);
+            border-left: 3px solid #00d4ff;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .stream-grid-status {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            background: #40d192;
+            z-index: 10;
+            box-shadow: 0 0 12px rgba(64, 209, 146, 0.75);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 0.7;
+            }
+        }
+
+        .stream-grid-status.offline {
+            background: #ff6c6c;
+            box-shadow: 0 0 12px rgba(255, 108, 108, 0.72);
+            animation: none;
+        }
+
+        .stream-grid-empty {
+            color: rgba(191, 219, 255, 0.32);
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        /* 单任务视图 */
+        .stream-single-view {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: none;
+        }
+
+        .stream-single-view.active {
+            display: block;
+        }
+
+        .stream-content {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .stream-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 100;
+            width: 100%;
+            height: 100%;
+            pointer-events: auto;
+        }
+
+        .stream-iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: 0;
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .tracking-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 160;
+            pointer-events: none;
+        }
+
+        .tracking-label-badge {
+            position: absolute;
+            min-width: 90px;
+            max-width: 240px;
+            padding: 6px 10px;
+            border-radius: 10px;
+            background: rgba(3, 22, 46, 0.88);
+            border: 1px solid rgba(0, 212, 255, 0.45);
+            color: #eaf9ff;
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.2;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tracking-label-badge.pending,
+        .tracking-label-badge.observed {
+            background: rgba(255, 193, 7, 0.9);
+            border-color: rgba(255, 193, 7, 0.52);
+            color: #1f1400;
+        }
+
+        .tracking-label-badge.unknown {
+            background: rgba(148, 163, 184, 0.9);
+            border-color: rgba(148, 163, 184, 0.5);
+            color: #081120;
+        }
+
+        .stream-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 200;
+        }
+
+        .tracking-stats-panel {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+            z-index: 210;
+            width: min(360px, calc(100% - 40px));
+            max-height: 58%;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            padding: 14px;
+            border-radius: 16px;
+            background: linear-gradient(180deg, rgba(3, 18, 38, 0.92) 0%, rgba(7, 28, 56, 0.9) 100%);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.26);
+            backdrop-filter: blur(8px);
+            overflow: hidden;
+        }
+
+        .tracking-stats-panel.active {
+            display: flex;
+        }
+
+        .tracking-stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .tracking-stats-title {
+            color: #eef9ff;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .tracking-stats-updated {
+            color: rgba(194, 227, 255, 0.72);
+            font-size: 11px;
+            white-space: nowrap;
+        }
+
+        .tracking-stats-summary {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .tracking-stats-card {
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .tracking-stats-card-label {
+            color: rgba(191, 219, 255, 0.74);
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+
+        .tracking-stats-card-value {
+            color: #ffffff;
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .tracking-stats-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .tracking-stats-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .tracking-stats-list::-webkit-scrollbar-thumb {
+            background: rgba(0, 212, 255, 0.25);
+            border-radius: 6px;
+        }
+
+        .tracking-person-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .tracking-person-main {
+            min-width: 0;
+        }
+
+        .tracking-person-name {
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 3px;
+            word-break: break-all;
+        }
+
+        .tracking-person-meta {
+            color: rgba(191, 219, 255, 0.74);
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .tracking-person-status {
+            flex-shrink: 0;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+
+        .tracking-person-status.inside {
+            color: #dbffef;
+            background: rgba(46, 204, 113, 0.18);
+            border: 1px solid rgba(46, 204, 113, 0.35);
+        }
+
+        .tracking-person-status.outside {
+            color: #d4e4f7;
+            background: rgba(148, 163, 184, 0.14);
+            border: 1px solid rgba(148, 163, 184, 0.24);
+        }
+
+        .tracking-person-status.pending,
+        .tracking-person-status.observed {
+            color: #ffe08a;
+            background: rgba(255, 193, 7, 0.18);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        .tracking-person-status.unknown {
+            color: #dbe7ff;
+            background: rgba(148, 163, 184, 0.18);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+        }
+
+        .tracking-empty-state {
+            padding: 18px 10px;
+            text-align: center;
+            color: rgba(191, 219, 255, 0.62);
+            font-size: 13px;
+        }
+
+        .stream-button {
+            background: linear-gradient(180deg, rgba(8, 31, 53, 0.96), rgba(8, 22, 37, 0.98));
+            border: 1px solid rgba(0, 212, 255, 0.26);
+            color: #eff9ff;
+            padding: 11px 22px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 12px 26px rgba(2, 8, 20, 0.34);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stream-button:hover {
+            transform: translateY(-2px);
+            border-color: rgba(0, 212, 255, 0.42);
+            box-shadow: 0 16px 28px rgba(2, 8, 20, 0.42);
+        }
+
+        /* 任务通道列表面板 */
+        .stream-task-panel {
+            width: 100%;
+            background: linear-gradient(180deg, rgba(5, 15, 27, 0.98), rgba(7, 18, 32, 0.98));
+            border-top: 1px solid rgba(0, 162, 255, 0.18);
+            padding: 11px 22px 10px;
+            max-height: 85px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            box-shadow: 0 -10px 24px rgba(0, 0, 0, 0.24);
+        }
+
+        .stream-task-panel::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .stream-task-panel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 2px;
+        }
+
+        .stream-task-panel::-webkit-scrollbar-thumb {
+            background: rgba(0, 212, 255, 0.32);
+            border-radius: 2px;
+        }
+
+        .stream-task-header {
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(150, 197, 228, 0.62);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stream-task-list {
+            display: flex;
+            gap: 10px;
+            flex-wrap: nowrap;
+        }
+
+        .stream-task-item {
+            padding: 8px 15px;
+            border: 1px solid rgba(0, 162, 255, 0.16);
+            border-radius: 8px;
+            background: rgba(8, 20, 34, 0.78);
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: rgba(232, 243, 255, 0.82);
+            position: relative;
+            overflow: hidden;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .stream-task-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(8, 34, 57, 0.94), rgba(11, 47, 75, 0.96));
+            transition: width 0.3s;
+            z-index: -1;
+        }
+
+        .stream-task-item:hover::before {
+            width: 100%;
+        }
+
+        .stream-task-item:hover {
+            border-color: rgba(0, 212, 255, 0.28);
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(2, 8, 20, 0.24);
+        }
+
+        .stream-task-item.active {
+            border-color: rgba(0, 212, 255, 0.38);
+            background: linear-gradient(90deg, rgba(8, 34, 57, 0.96), rgba(11, 47, 75, 0.96));
+            color: #f6fbff;
+            box-shadow: inset 0 0 0 1px rgba(0, 212, 255, 0.12), 0 12px 22px rgba(2, 8, 20, 0.28);
+        }
+
+        .stream-task-item.active::before {
+            width: 100%;
+        }
+
+        .task-icon {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #40d192;
+            box-shadow: 0 0 8px rgba(64, 209, 146, 0.82);
+            flex-shrink: 0;
+        }
+
+        .stream-task-item.active .task-icon {
+            background: #f8fcff;
+            box-shadow: 0 0 8px rgba(248, 252, 255, 0.82);
+        }
+
+        .stream-task-item.offline .task-icon {
+            background: #ff7272;
+            box-shadow: 0 0 8px rgba(255, 114, 114, 0.82);
+        }
+    </style>
+</head>
+<body>
+    <div class="stream-page">
+        <!-- 顶部工具栏 -->
+        <div class="stream-header">
+            <div class="stream-header-title">
+                <i class="fas fa-video"></i>
+                实时预览
+            </div>
+            <div class="stream-mode-switch">
+                <button class="mode-btn active" id="gridModeBtn" onclick="switchToGridMode()">
+                    <i class="fas fa-th"></i>
+                    合流通道
+                </button>
+                <button class="mode-btn" id="singleModeBtn" onclick="backToGrid()">
+                    <i class="fas fa-expand"></i>
+                    返回合流
+                </button>
+            </div>
+        </div>
+
+        <!-- 主视频区域 -->
+        <div class="stream-main-container">
+            <div class="stream-video-area">
+                <!-- 合流视图（2x2四宫格） -->
+                <div class="stream-grid-view" id="gridView">
+        <div class="stream-grid-item" id="grid-0">
+            <div class="stream-grid-label">通道 1</div>
+            <div class="stream-grid-status"></div>
+            <iframe class="stream-grid-iframe" id="grid-iframe-0"></iframe>
+        </div>
+                    <div class="stream-grid-item" id="grid-1">
+                        <div class="stream-grid-label">通道 2</div>
+                        <div class="stream-grid-status offline"></div>
+                        <iframe class="stream-grid-iframe" id="grid-iframe-1"></iframe>
+                        <div class="stream-grid-empty">暂无信号</div>
+                    </div>
+                    <div class="stream-grid-item" id="grid-2">
+                        <div class="stream-grid-label">通道 3</div>
+                        <div class="stream-grid-status offline"></div>
+                        <iframe class="stream-grid-iframe" id="grid-iframe-2"></iframe>
+                        <div class="stream-grid-empty">暂无信号</div>
+                    </div>
+                    <div class="stream-grid-item" id="grid-3">
+                        <div class="stream-grid-label">通道 4</div>
+                        <div class="stream-grid-status offline"></div>
+                        <iframe class="stream-grid-iframe" id="grid-iframe-3"></iframe>
+                        <div class="stream-grid-empty">暂无信号</div>
+                    </div>
+                </div>
+
+                <!-- 单任务视图 -->
+                <div class="stream-single-view" id="singleView">
+                    <div class="stream-content">
+                        <canvas id="stream-canvas-0" class="stream-canvas"></canvas>
+                        <iframe id="stream-iframe-0" class="stream-iframe" src=""></iframe>
+                        <div id="stream-tracking-overlay" class="tracking-overlay"></div>
+                    </div>
+                    <div class="stream-controls">
+                        <button id="stream-button" class="stream-button">
+                            <i class="fas fa-save"></i> 提交配置
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 任务通道列表 -->
+            <div class="stream-task-panel">
+                <div class="stream-task-header">
+                    <i class="fas fa-list"></i>
+                    任务通道
+                </div>
+                <div class="stream-task-list" id="taskList">
+                    <!-- 动态加载任务列表 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'grid'; // 'grid' or 'single'
+        let currentTaskId = null;
+        let currentTaskMeta = null;
+        let tasks = [];
+        let streamCanvas = null;
+        let polygon = null;
+        let circleList = [];
+        let points = [];
+
+        function isNoRoiAlgorithm(algorithm) {
+            // 旧版前端 polygon 红框已整体废弃，实时预览统一只看流内黄色 ROI/OSD 展示。
+            return true;
+        }
+
+        function isRegisteredPersonTrackingTask(task) {
+            return !!task && String(task.algorithm || '').trim() === 'registered_person_tracking';
+        }
+
+        function escapeHtml(value) {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function normalizeTrackingTimestampMs(value) {
+            const numeric = Number(value || 0);
+            if (!Number.isFinite(numeric) || numeric <= 0) {
+                return 0;
+            }
+            return numeric > 10000000000000 ? Math.floor(numeric / 1000) : Math.floor(numeric);
+        }
+
+        function formatTrackingTime(value) {
+            const normalized = normalizeTrackingTimestampMs(value);
+            if (!normalized) {
+                return '--';
+            }
+            const date = new Date(normalized);
+            if (Number.isNaN(date.getTime())) {
+                return '--';
+            }
+            return date.toLocaleTimeString('zh-CN', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        function formatTrackingDuration(value) {
+            const totalMs = Math.max(0, Math.floor(Number(value || 0)));
+            const totalSeconds = Math.floor(totalMs / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            if (hours > 0) {
+                return `${hours}小时${minutes}分${seconds}秒`;
+            }
+            if (minutes > 0) {
+                return `${minutes}分${seconds}秒`;
+            }
+            return `${seconds}秒`;
+        }
+
+        function getTrackingPanelElements() {
+            return {
+                overlay: document.getElementById('stream-tracking-overlay'),
+                panel: document.getElementById('trackingStatsPanel'),
+                summary: document.getElementById('trackingStatsSummary'),
+                list: document.getElementById('trackingStatsList'),
+                updated: document.getElementById('trackingStatsUpdated')
+            };
+        }
+
+        function clearRegisteredTrackingVisuals() {
+            const { overlay, panel, summary, list, updated } = getTrackingPanelElements();
+            if (overlay) {
+                overlay.innerHTML = '';
+            }
+            if (panel) {
+                panel.classList.remove('active');
+            }
+            if (summary) {
+                summary.innerHTML = '';
+            }
+            if (list) {
+                list.innerHTML = '';
+            }
+            if (updated) {
+                updated.textContent = '等待数据';
+            }
+        }
+
+        function renderRegisteredTrackingOverlay(taskStats) {
+            const { overlay } = getTrackingPanelElements();
+            if (!overlay) {
+                return;
+            }
+
+            overlay.innerHTML = '';
+        }
+
+        function renderRegisteredTrackingStats(taskStats) {
+            const { panel, summary, list, updated } = getTrackingPanelElements();
+            if (!panel || !summary || !list || !updated) {
+                return;
+            }
+
+            if (!taskStats) {
+                clearRegisteredTrackingVisuals();
+                return;
+            }
+
+            panel.classList.add('active');
+            updated.textContent = `更新时间 ${formatTrackingTime(taskStats.lastFrameTimestampMs)}`;
+            summary.innerHTML = `
+                <div class="tracking-stats-card">
+                    <div class="tracking-stats-card-label">当前登记人员</div>
+                    <div class="tracking-stats-card-value">${Number(taskStats.currentRegisteredPersonCount || 0)}</div>
+                </div>
+                <div class="tracking-stats-card">
+                    <div class="tracking-stats-card-label">活跃追踪目标</div>
+                    <div class="tracking-stats-card-value">${Number(taskStats.currentRegisteredTrackCount || 0)}</div>
+                </div>
+            `;
+
+            const persons = Array.isArray(taskStats.persons) ? taskStats.persons.slice() : [];
+            const activeTracks = (Array.isArray(taskStats.tracks) ? taskStats.tracks.slice() : [])
+                .filter(track => track && track.active)
+                .sort((a, b) => Number(b.lastSeenMs || 0) - Number(a.lastSeenMs || 0));
+            persons.sort((a, b) => {
+                if (!!b.currentInside !== !!a.currentInside) {
+                    return b.currentInside ? 1 : -1;
+                }
+                return Number(b.lastSeenMs || 0) - Number(a.lastSeenMs || 0);
+            });
+
+            if (!persons.length) {
+                if (!activeTracks.length) {
+                    list.innerHTML = '<div class="tracking-empty-state">当前区域内暂无已登记人员</div>';
+                    return;
+                }
+                list.innerHTML = activeTracks.map(track => {
+                    const state = String(track.recognitionState || 'confirmed');
+                    const stateText =
+                        state === 'pending' ? '待确认' :
+                        state === 'unknown' ? '未匹配' :
+                        state === 'observed' ? '已观察' : '已确认';
+                    const score = Number(track.bestScore || track.observedScore || 0);
+                    return `
+                        <div class="tracking-person-item">
+                            <div class="tracking-person-main">
+                                <div class="tracking-person-name">${escapeHtml(track.displayName || track.observedLabel || `Track ${track.trackId}`)}</div>
+                                <div class="tracking-person-meta">
+                                    轨迹 ID ${Number(track.trackId || 0)}<br>
+                                    识别分数 ${score > 0 ? score.toFixed(2) : '--'}<br>
+                                    最近出现 ${formatTrackingTime(track.lastSeenMs)}
+                                </div>
+                            </div>
+                            <div class="tracking-person-status ${state}">
+                                ${stateText}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                return;
+            }
+
+            list.innerHTML = persons.map(person => `
+                <div class="tracking-person-item">
+                    <div class="tracking-person-main">
+                        <div class="tracking-person-name">${escapeHtml(person.displayName || person.label || '未命名')}</div>
+                        <div class="tracking-person-meta">
+                            进入次数 ${Number(person.entries || 0)} 次<br>
+                            累计停留 ${formatTrackingDuration(person.totalDwellMs || 0)}<br>
+                            最近出现 ${formatTrackingTime(person.lastSeenMs)}
+                        </div>
+                    </div>
+                    <div class="tracking-person-status ${person.currentInside ? 'inside' : 'outside'}">
+                        ${person.currentInside ? '区域内' : '已离开'}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function refreshRegisteredTrackingStats() {
+            clearRegisteredTrackingVisuals();
+        }
+
+        function convertRtspToPreviewUrl(rtspUrl) {
+            const base = window.location.protocol + "//" + window.location.hostname + ":8889";
+            if (!rtspUrl) {
+                return '';
+            }
+            const rawPath = String(rtspUrl).replace(/^rtsp:\/\/[^/]+(?::\d+)?/, '');
+            if (!rawPath) {
+                return '';
+            }
+
+            // 兼容旧任务地址：/0_xxx -> /live/0_xxx/
+            let normalizedPath = rawPath;
+            if (/^\/0_\d+\/?$/.test(normalizedPath)) {
+                normalizedPath = '/live' + normalizedPath;
+                if (!normalizedPath.endsWith('/')) {
+                    normalizedPath += '/';
+                }
+            }
+
+            return base + normalizedPath;
+        }
+
+        function getTaskDisplayStreamUrl(task, channelId) {
+            if (task && task.outputRtsp) {
+                return convertRtspToPreviewUrl(task.outputRtsp);
+            }
+            if (channelId === null || channelId === undefined) {
+                return '';
+            }
+            const base = window.location.protocol + "//" + window.location.hostname + ":8889";
+            if (task && task.algorithm === 'face_recognition') {
+                return base + "/live/0_" + channelId + "/";
+            }
+            return base + "/0_" + channelId;
+        }
+
+        function getPreviewChannelId(task, channel) {
+            if (task && Number.isInteger(task.channelId)) {
+                return task.channelId;
+            }
+            if (channel) {
+                return channel.channelAssignment === '2' ? 10 : 20;
+            }
+            return null;
+        }
+
+        function buildGridPreviewItems(runningTasks, channels) {
+            const channelMap = new Map();
+            channels.forEach(channel => {
+                channelMap.set(channel.id, channel);
+            });
+
+            const items = [null, null, null, null];
+            let slotIndex = 0;
+
+            runningTasks.forEach(task => {
+                if (slotIndex >= items.length) {
+                    return;
+                }
+                items[slotIndex] = {
+                    task,
+                    channel: channelMap.get(task.videoSourceId) || null
+                };
+                slotIndex += 1;
+            });
+
+            return items;
+        }
+
+        function updateGridSlot(index, item) {
+            const iframe = document.getElementById(`grid-iframe-${index}`);
+            const statusDot = document.querySelector(`#grid-${index} .stream-grid-status`);
+            const emptyMsg = document.querySelector(`#grid-${index} .stream-grid-empty`);
+            const label = document.querySelector(`#grid-${index} .stream-grid-label`);
+
+            if (!iframe) {
+                return;
+            }
+
+            const task = item ? item.task : null;
+            const channel = item ? item.channel : null;
+            const channelId = getPreviewChannelId(task, channel);
+            let streamUrl = '';
+            let labelText = `通道 ${index + 1}`;
+
+            if (task && channelId !== null) {
+                streamUrl = getTaskDisplayStreamUrl(task, channelId);
+                labelText = channel && channel.name
+                    ? `${task.taskNumber || ('任务' + task.id)} - ${channel.name}`
+                    : (task.taskNumber || ('任务' + task.id));
+            } else if (channel && channel.url && channelId !== null) {
+                streamUrl = `${window.location.protocol}//${window.location.hostname}:8889/0_${channelId}`;
+                labelText = channel.name || `通道 ${index + 1}`;
+            }
+
+            const currentBaseUrl = (iframe.src || '').split('?')[0];
+            if (currentBaseUrl !== streamUrl) {
+                iframe.src = streamUrl;
+            }
+
+            if (label) {
+                label.textContent = labelText;
+            }
+
+            if (statusDot) {
+                if (streamUrl) {
+                    statusDot.classList.remove('offline');
+                    statusDot.classList.add('online');
+                } else {
+                    statusDot.classList.remove('online');
+                    statusDot.classList.add('offline');
+                }
+            }
+
+            if (emptyMsg) {
+                emptyMsg.style.display = streamUrl ? 'none' : 'block';
+            }
+
+            if (task) {
+                console.log(`预览窗口${index + 1}:`, streamUrl, `任务=${task.taskNumber || task.id}`);
+            } else if (channel) {
+                console.log(`预览窗口${index + 1}:`, streamUrl, `通道=${channel.name || channel.id}`);
+            }
+        }
+
+        // 初始化合流视图（4宫格）
+        function initGridView() {
+            // 先获取任务列表，找出正在运行的任务
+            axios.get('/api/tasks')
+                .then(taskResponse => {
+                    const runningTasks = taskResponse.data.tasks ? taskResponse.data.tasks.filter(t => t.status === 'running') : [];
+                    console.log('运行中的任务:', runningTasks);
+                    
+                    // 再获取通道列表
+                    return axios.get('/api/channels').then(channelResponse => {
+                        return { runningTasks, channels: channelResponse.data.channels || [] };
+                    });
+                })
+                .then(({ runningTasks, channels }) => {
+                    console.log('加载通道列表:', channels);
+
+                    const previewItems = buildGridPreviewItems(runningTasks, channels);
+                    for (let index = 0; index < 4; index += 1) {
+                        updateGridSlot(index, previewItems[index] || null);
+                    }
+                })
+                .catch(error => {
+                    console.error('加载合流通道失败:', error);
+                });
+        }
+
+        // 初始化（页面加载时不初始化Canvas，等用户点击任务时再初始化）
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTasks();
+            initGridView();
+            
+            // 定时刷新任务列表（每3秒）
+            setInterval(() => {
+                const oldTasks = JSON.stringify(tasks);
+                loadTasks();
+                
+                // 如果任务状态有变化，刷新合流视图
+                setTimeout(() => {
+                    const newTasks = JSON.stringify(tasks);
+                    if (currentMode === 'grid' && oldTasks !== newTasks) {
+                        console.log('任务状态已变化，刷新合流通道');
+                        initGridView();
+                    }
+                }, 500);
+            }, 3000);
+
+            setInterval(() => {
+                refreshRegisteredTrackingStats();
+            }, 500);
+        });
+
+        // 加载任务列表
+        function loadTasks() {
+            axios.get('/api/tasks')
+                .then(response => {
+                    if (response.data.status === 'success') {
+                        tasks = response.data.tasks;
+                        if (currentTaskId) {
+                            currentTaskMeta = tasks.find(task => task.id === currentTaskId) || null;
+                            if (!currentTaskMeta || currentTaskMeta.status !== 'running') {
+                                clearRegisteredTrackingVisuals();
+                            }
+                        }
+                        renderTaskList();
+                    }
+                })
+                .catch(error => {
+                    console.error('加载任务失败:', error);
+                });
+        }
+
+        // 渲染任务列表
+        function renderTaskList() {
+            const taskList = document.getElementById('taskList');
+            taskList.innerHTML = '';
+
+            // 只显示运行中的任务
+            const runningTasks = tasks.filter(task => task.status === 'running');
+            
+            if (runningTasks.length === 0) {
+                taskList.innerHTML = '<div style="color: rgba(255,255,255,0.5); padding: 8px;">暂无运行中的任务</div>';
+                return;
+            }
+
+            runningTasks.forEach(task => {
+                const taskItem = document.createElement('div');
+                taskItem.className = 'stream-task-item';
+                
+                taskItem.innerHTML = `
+                    <div class="task-icon"></div>
+                    <span>${task.taskNumber || '任务' + task.id}</span>
+                `;
+                
+                taskItem.onclick = () => switchToTask(task);
+                taskList.appendChild(taskItem);
+            });
+        }
+
+        // 切换到合流模式
+        function switchToGridMode() {
+            currentMode = 'grid';
+            currentTaskId = null;
+            currentTaskMeta = null;
+            document.getElementById('gridView').classList.remove('hidden');
+            document.getElementById('singleView').classList.remove('active');
+            document.getElementById('gridModeBtn').classList.add('active');
+            document.getElementById('singleModeBtn').classList.remove('active');
+            
+            // 清除任务选中状态
+            document.querySelectorAll('.stream-task-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // 刷新合流通道显示
+            initGridView();
+            clearRegisteredTrackingVisuals();
+        }
+
+        // 切换到单任务视图
+        function switchToTask(task) {
+            currentMode = 'single';
+            currentTaskId = task.id;
+            currentTaskMeta = task;
+            
+            document.getElementById('gridView').classList.add('hidden');
+            document.getElementById('singleView').classList.add('active');
+            document.getElementById('gridModeBtn').classList.remove('active');
+            document.getElementById('singleModeBtn').classList.add('active');
+            
+            // 更新任务选中状态
+            document.querySelectorAll('.stream-task-item').forEach((item, index) => {
+                const runningTasks = tasks.filter(t => t.status === 'running');
+                if (runningTasks[index] && runningTasks[index].id === task.id) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+            
+            const canvas = document.getElementById('stream-canvas-0');
+            const button = document.getElementById('stream-button');
+
+            canvas.style.display = 'none';
+            canvas.style.pointerEvents = 'none';
+            button.style.display = 'none';
+
+            if (streamCanvas) {
+                try {
+                    streamCanvas.clear();
+                    streamCanvas.renderAll();
+                } catch (e) {
+                    console.log('清除旧版 ROI canvas 失败:', e);
+                }
+                polygon = null;
+                circleList = [];
+                points = [];
+            }
+
+            if (!isRegisteredPersonTrackingTask(task)) {
+                clearRegisteredTrackingVisuals();
+            }
+            
+            // 加载该任务的视频流
+            loadTaskStream(task);
+            if (isRegisteredPersonTrackingTask(task)) {
+                refreshRegisteredTrackingStats();
+            }
+        }
+
+        // 返回合流视图
+        function backToGrid() {
+            switchToGridMode();
+        }
+
+        // 加载任务视频流
+        function loadTaskStream(task) {
+            // 从channels.json获取视频源URL
+            axios.get('/api/channels')
+                .then(response => {
+                    if (response.data.status === 'success') {
+                        const channels = response.data.channels;
+                        const channel = channels.find(ch => ch.id === task.videoSourceId) || null;
+                        const channelId = getPreviewChannelId(task, channel);
+                        const streamUrl = getTaskDisplayStreamUrl(task, channelId);
+
+                        document.getElementById('stream-iframe-0').src = streamUrl;
+                        console.log('加载任务视频流:', streamUrl);
+
+                    }
+                });
+        }
+
+        // 初始化Canvas（用于ROI多边形绘制）
+        function initStreamCanvas() {
+            const canvas0 = document.getElementById('stream-canvas-0');
+            const button = document.getElementById('stream-button');
+            if (canvas0) {
+                canvas0.style.display = 'none';
+                canvas0.style.pointerEvents = 'none';
+            }
+            if (button) {
+                button.style.display = 'none';
+            }
+            if (streamCanvas) {
+                streamCanvas.dispose();
+                streamCanvas = null;
+            }
+            polygon = null;
+            circleList = [];
+            points = [];
+        }
+
+        function loadPolygon() {
+            if (streamCanvas) {
+                try {
+                    streamCanvas.clear();
+                    streamCanvas.renderAll();
+                } catch (error) {
+                    console.warn('清理废弃的 ROI 画布失败:', error);
+                }
+            }
+            polygon = null;
+            circleList = [];
+            points = [];
+        }
+
+        // 坐标转换函数
+        const streamWidth = 1920;
+        const streamHeight = 1080;  // 视频流原始高度（根据实际分辨率调整）
+
+        function canvasPointToStreamPoint(iframe, point) {
+            const zmX = streamWidth / iframe.clientWidth;
+            const zmY = streamHeight / iframe.clientHeight;
+            return { 
+                x: parseInt(point.x * zmX), 
+                y: parseInt(point.y * zmY) 
+            };
+        }
+
+        function streamPointToCanvasPoint(iframe, point) {
+            const zmX = iframe.clientWidth / streamWidth;
+            const zmY = iframe.clientHeight / streamHeight;
+            console.log(`坐标转换: 原始(${point.x},${point.y}) zmX=${zmX.toFixed(3)} zmY=${zmY.toFixed(3)} → Canvas(${(point.x * zmX).toFixed(2)},${(point.y * zmY).toFixed(2)})`);
+            return { 
+                x: (point.x * zmX), 
+                y: (point.y * zmY) 
+            };
+        }
+    </script>
+</body>
+</html>

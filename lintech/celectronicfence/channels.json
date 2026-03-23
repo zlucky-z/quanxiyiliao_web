@@ -1,0 +1,40 @@
+{
+    "channels": [
+        {
+            "channelAssignment": "1",
+            "description": "2",
+            "gb28181": "",
+            "id": 2,
+            "name": "钢铁",
+            "status": "configured",
+            "url": "rtsp://admin:1234qwer@192.168.1.64:554/mdeia/video1"
+        },
+        {
+            "channelAssignment": "2",
+            "description": "120",
+            "gb28181": "",
+            "id": 3,
+            "name": "120",
+            "status": "configured",
+            "url": "rtsp://192.168.1.120:554/media/video1"
+        },
+        {
+            "channelAssignment": "1",
+            "description": "OCR",
+            "gb28181": "",
+            "id": 7,
+            "name": "OCR",
+            "status": "configured",
+            "url": "rtsp://192.168.1.122/video0"
+        },
+        {
+            "channelAssignment": "1",
+            "description": "206",
+            "gb28181": "",
+            "id": 8,
+            "name": "206",
+            "status": "configured",
+            "url": "rtsp://192.168.1.206:554/media/video1"
+        }
+    ]
+}

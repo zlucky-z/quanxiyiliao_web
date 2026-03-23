@@ -1,0 +1,2870 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理系统</title>
+    <script src="axios.min.js"></script>
+    <script src="fabric.min.js"></script>
+    <!-- 引入 Bootstrap 的 CSS 和 JavaScript -->
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <script src="bootstrap.bundle.min.js"></script>
+    <!-- 引入 Chart.js (本地版本) -->
+    <script src="chart.min.js"></script>
+    <!-- 引入 Font Awesome 图标 (本地版本) -->
+    <link rel="stylesheet" href="fontawesome-all.min.css">
+    <link rel="stylesheet" href="css/bootstrap-icons.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+        }
+
+        /* 侧边栏样式 */
+        .sidebar {
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            width: 240px;
+            height: 100vh;
+            position: relative;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+
+        .sidebar.collapsed {
+            width: 70px;
+        }
+
+        /* 侧边栏头部 */
+        .sidebar-header {
+            padding: 20px 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            transition: opacity 0.3s;
+        }
+
+        .sidebar.collapsed .sidebar-title {
+            opacity: 0;
+            width: 0;
+        }
+
+        /* 折叠按钮 */
+        .collapse-btn {
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 5px;
+            transition: transform 0.3s;
+        }
+
+        .collapse-btn:hover {
+            color: #4a9eff;
+        }
+
+        .sidebar.collapsed .collapse-btn {
+            transform: rotate(180deg);
+        }
+
+        /* 导航菜单 */
+        .nav-menu {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+
+        .nav-menu::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .nav-menu::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+        }
+
+        .nav-item {
+            margin: 5px 10px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .nav-link:hover {
+            background: rgba(74, 158, 255, 0.1);
+            color: #4a9eff;
+        }
+
+        .nav-link.active {
+            background: linear-gradient(90deg, #4a9eff 0%, #357abd 100%);
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(74, 158, 255, 0.3);
+        }
+
+        .nav-link i {
+            font-size: 20px;
+            width: 24px;
+            text-align: center;
+            margin-right: 12px;
+            transition: margin 0.3s;
+        }
+
+        .sidebar.collapsed .nav-link i {
+            margin-right: 0;
+        }
+
+        .nav-link span {
+            white-space: nowrap;
+            overflow: hidden;
+            transition: opacity 0.3s;
+        }
+
+        .sidebar.collapsed .nav-link span {
+            opacity: 0;
+            width: 0;
+        }
+
+        /* 用户信息 */
+        .user-info {
+            padding: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .user-details {
+            flex: 1;
+            overflow: hidden;
+            transition: opacity 0.3s;
+        }
+
+        .sidebar.collapsed .user-details {
+            opacity: 0;
+            width: 0;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* 主内容区 */
+        .main-content {
+            flex: 1;
+            background: #f5f7fa;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 内容页面 */
+        .content-page {
+            display: none;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .content-page.active {
+            display: block;
+        }
+
+        /* iframe 页面 */
+        .iframe-page {
+            overflow: hidden;
+            padding: 0;
+        }
+
+        .iframe-page iframe {
+            border: none;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 实时预览页面样式 */
+        .stream-page {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            overflow: hidden;
+        }
+
+        .stream-page.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 顶部工具栏 */
+        .stream-header {
+            background: rgba(20, 20, 30, 0.98);
+            padding: 12px 25px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            border-bottom: 1px solid rgba(102, 126, 234, 0.3);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+            flex-shrink: 0;
+        }
+
+        .stream-header-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stream-mode-switch {
+            display: flex;
+            gap: 12px;
+            margin-left: auto;
+        }
+
+        .mode-btn {
+            padding: 8px 16px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            background: transparent;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .mode-btn:hover:not(.active) {
+            border-color: #667eea;
+            color: white;
+            background: rgba(102, 126, 234, 0.15);
+        }
+
+        /* 主视频区域容器 */
+        .stream-main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 视频显示区域 */
+        .stream-video-area {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 合流视图（2x2四宫格） */
+        .stream-grid-view {
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 3px;
+            background: #0a0a0a;
+            padding: 2px;
+        }
+
+        .stream-grid-view.hidden {
+            display: none;
+        }
+
+        .stream-grid-item {
+            position: relative;
+            background: #1a1a1a;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stream-grid-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .stream-grid-label {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 10;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .stream-grid-status {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4caf50;
+            z-index: 10;
+            box-shadow: 0 0 15px rgba(76, 175, 80, 1);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 0.7;
+            }
+        }
+
+        .stream-grid-status.offline {
+            background: #f44336;
+            box-shadow: 0 0 15px rgba(244, 67, 54, 1);
+            animation: none;
+        }
+
+        .stream-grid-empty {
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        /* 单任务视图 */
+        .stream-single-view {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: none;
+        }
+
+        .stream-single-view.active {
+            display: block;
+        }
+
+        .stream-content {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .stream-fabric {
+            position: absolute !important;
+            width: 100%;
+            height: 100%;
+        }
+
+        .stream-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 100;
+            width: 100%;
+            height: 100%;
+            pointer-events: auto;
+        }
+
+        .stream-iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: 0;
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .tracking-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 160;
+            pointer-events: none;
+        }
+
+        .tracking-label-badge {
+            position: absolute;
+            min-width: 90px;
+            max-width: 240px;
+            padding: 6px 10px;
+            border-radius: 10px;
+            background: rgba(3, 22, 46, 0.88);
+            border: 1px solid rgba(0, 212, 255, 0.45);
+            color: #eaf9ff;
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.2;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tracking-label-badge.pending,
+        .tracking-label-badge.observed {
+            background: rgba(255, 193, 7, 0.9);
+            border-color: rgba(255, 193, 7, 0.52);
+            color: #1f1400;
+        }
+
+        .tracking-label-badge.unknown {
+            background: rgba(148, 163, 184, 0.9);
+            border-color: rgba(148, 163, 184, 0.5);
+            color: #081120;
+        }
+
+        .stream-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 200;
+        }
+
+        .tracking-stats-panel {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+            z-index: 210;
+            width: min(360px, calc(100% - 40px));
+            max-height: 58%;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            padding: 14px;
+            border-radius: 16px;
+            background: linear-gradient(180deg, rgba(3, 18, 38, 0.92) 0%, rgba(7, 28, 56, 0.9) 100%);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.26);
+            backdrop-filter: blur(8px);
+            overflow: hidden;
+        }
+
+        .tracking-stats-panel.active {
+            display: flex;
+        }
+
+        .tracking-stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .tracking-stats-title {
+            color: #eef9ff;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .tracking-stats-updated {
+            color: rgba(194, 227, 255, 0.72);
+            font-size: 11px;
+            white-space: nowrap;
+        }
+
+        .tracking-stats-summary {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .tracking-stats-card {
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .tracking-stats-card-label {
+            color: rgba(191, 219, 255, 0.74);
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+
+        .tracking-stats-card-value {
+            color: #ffffff;
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .tracking-stats-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .tracking-stats-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .tracking-stats-list::-webkit-scrollbar-thumb {
+            background: rgba(0, 212, 255, 0.25);
+            border-radius: 6px;
+        }
+
+        .tracking-person-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .tracking-person-main {
+            min-width: 0;
+        }
+
+        .tracking-person-name {
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 3px;
+            word-break: break-all;
+        }
+
+        .tracking-person-meta {
+            color: rgba(191, 219, 255, 0.74);
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .tracking-person-status {
+            flex-shrink: 0;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+
+        .tracking-person-status.inside {
+            color: #dbffef;
+            background: rgba(46, 204, 113, 0.18);
+            border: 1px solid rgba(46, 204, 113, 0.35);
+        }
+
+        .tracking-person-status.outside {
+            color: #d4e4f7;
+            background: rgba(148, 163, 184, 0.14);
+            border: 1px solid rgba(148, 163, 184, 0.24);
+        }
+
+        .tracking-person-status.pending,
+        .tracking-person-status.observed {
+            color: #ffe08a;
+            background: rgba(255, 193, 7, 0.18);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        .tracking-person-status.unknown {
+            color: #dbe7ff;
+            background: rgba(148, 163, 184, 0.18);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+        }
+
+        .tracking-empty-state {
+            padding: 18px 10px;
+            text-align: center;
+            color: rgba(191, 219, 255, 0.62);
+            font-size: 13px;
+        }
+
+        .stream-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stream-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        /* 任务通道列表面板 */
+        .stream-task-panel {
+            width: 100%;
+            background: rgba(20, 20, 30, 0.98);
+            border-top: 1px solid rgba(102, 126, 234, 0.3);
+            padding: 12px 25px 10px;
+            max-height: 85px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            flex-shrink: 0;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .stream-task-panel::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .stream-task-panel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+        }
+
+        .stream-task-panel::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 2px;
+        }
+
+        .stream-task-header {
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.4);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stream-task-list {
+            display: flex;
+            gap: 10px;
+            flex-wrap: nowrap;
+        }
+
+        .stream-task-item {
+            padding: 8px 16px;
+            border: 2px solid rgba(255, 255, 255, 0.12);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.03);
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.85);
+            position: relative;
+            overflow: hidden;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .stream-task-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+            z-index: -1;
+        }
+
+        .stream-task-item:hover::before {
+            width: 100%;
+        }
+
+        .stream-task-item:hover {
+            border-color: #667eea;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .stream-task-item.active {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 3px 15px rgba(102, 126, 234, 0.6);
+        }
+
+        .stream-task-item.active::before {
+            width: 100%;
+        }
+
+        .task-icon {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4caf50;
+            box-shadow: 0 0 8px rgba(76, 175, 80, 1);
+            flex-shrink: 0;
+        }
+
+        .stream-task-item.active .task-icon {
+            background: white;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
+        }
+
+        .stream-task-item.offline .task-icon {
+            background: #f44336;
+            box-shadow: 0 0 8px rgba(244, 67, 54, 1);
+        }
+
+        /* 基本信息页面样式 */
+        .info-page {
+            padding: 30px;
+        }
+
+        .info-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .info-card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-card-title i {
+            color: #4a9eff;
+        }
+
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .info-table td {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .info-table td:first-child {
+            color: #666;
+            width: 150px;
+            font-weight: 500;
+        }
+
+        .info-table td:nth-child(2) {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .info-table td:nth-child(3) {
+            color: #666;
+            width: 150px;
+            font-weight: 500;
+        }
+
+        .info-table td:nth-child(4) {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .info-actions {
+            margin-top: 20px;
+            text-align: center;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .info-btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .info-btn-primary {
+            background: #4a9eff;
+            color: white;
+        }
+
+        .info-btn-success {
+            background: #52c41a;
+            color: white;
+        }
+
+        .info-btn-danger {
+            background: #ff4d4f;
+            color: white;
+        }
+
+        .info-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        /* 图表容器 */
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chart-title i {
+            color: #4a9eff;
+        }
+
+        /* 状态标签 */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-authorized {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .firmware-modal .modal-content {
+            background: linear-gradient(135deg, #001a3a 0%, #00102a 100%);
+            border: 1px solid rgba(0, 191, 255, 0.28);
+            color: #dfefff;
+            border-radius: 14px;
+            box-shadow: 0 16px 50px rgba(0, 0, 0, 0.5);
+            height: min(88vh, 900px);
+            display: flex;
+        }
+
+        .firmware-modal .modal-header {
+            border-bottom: 1px solid rgba(0, 191, 255, 0.25);
+            background: rgba(0, 120, 210, 0.22);
+        }
+
+        .firmware-modal .modal-title {
+            color: #00d4ff;
+            font-weight: 700;
+        }
+
+        .firmware-modal .modal-footer {
+            border-top: 1px solid rgba(0, 191, 255, 0.2);
+        }
+
+        .firmware-modal .modal-body {
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .firmware-modal .form-label {
+            color: #8ea9c6;
+            font-weight: 600;
+        }
+
+        .firmware-modal .form-control {
+            background: rgba(1, 14, 36, 0.85);
+            border: 1px solid rgba(0, 191, 255, 0.25);
+            color: #dfefff;
+        }
+
+        .firmware-modal .form-control:focus {
+            background: rgba(1, 14, 36, 0.95);
+            border-color: #00d4ff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 212, 255, 0.15);
+            color: #ffffff;
+        }
+
+        .firmware-modal .btn-close {
+            filter: invert(1);
+        }
+
+        .firmware-status {
+            display: none;
+            margin-top: 12px;
+        }
+
+        .firmware-upload-row {
+            border: 1px solid rgba(0, 191, 255, 0.2);
+            border-radius: 10px;
+            padding: 12px;
+            background: rgba(0, 20, 45, 0.45);
+            margin-bottom: 12px;
+        }
+
+        .firmware-row-index {
+            color: #8ea9c6;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+
+        .firmware-row-actions {
+            display: flex;
+            justify-content: flex-end;
+            align-items: end;
+            height: 100%;
+        }
+
+        .firmware-help-text {
+            color: #8ea9c6;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+
+        .firmware-row-status {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #8ea9c6;
+        }
+
+        .firmware-row-status.status-pending {
+            color: #8ea9c6;
+        }
+
+        .firmware-row-status.status-uploading {
+            color: #00d4ff;
+        }
+
+        .firmware-row-status.status-success {
+            color: #5fd37a;
+        }
+
+        .firmware-row-status.status-failed {
+            color: #ff6b7c;
+        }
+
+        .firmware-row-status.status-skipped {
+            color: #b8a18a;
+        }
+
+        .firmware-row-detail-wrap {
+            margin-top: 6px;
+        }
+
+        .firmware-detail-toggle {
+            padding: 0;
+            font-size: 12px;
+            color: #ff8a97;
+            text-decoration: underline;
+            border: none;
+            background: transparent;
+            display: none;
+        }
+
+        .firmware-detail-toggle:hover {
+            color: #ff6b7c;
+        }
+
+        .firmware-row-detail {
+            margin-top: 6px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 107, 124, 0.35);
+            background: rgba(64, 10, 20, 0.55);
+            color: #ffd7dc;
+            font-size: 12px;
+            line-height: 1.4;
+            display: none;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .firmware-list-panel {
+            border: 1px solid rgba(0, 191, 255, 0.22);
+            border-radius: 12px;
+            background: rgba(0, 20, 45, 0.35);
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            height: clamp(260px, 42vh, 460px);
+            min-height: 260px;
+        }
+
+        .firmware-list-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 6px;
+        }
+
+        .firmware-list-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .firmware-list-scroll::-webkit-scrollbar-track {
+            background: rgba(0, 18, 46, 0.7);
+            border-radius: 8px;
+        }
+
+        .firmware-list-scroll::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #00d4ff 0%, #007bff 100%);
+            border-radius: 8px;
+        }
+
+        .firmware-list-scroll::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #29e0ff 0%, #1790ff 100%);
+        }
+        body {
+            background:
+                radial-gradient(circle at top, rgba(0, 162, 255, 0.18) 0%, rgba(0, 162, 255, 0) 34%),
+                linear-gradient(180deg, #07111f 0%, #0a1628 56%, #09111d 100%);
+            color: #dbe8ff;
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, rgba(6, 14, 25, 0.98) 0%, rgba(8, 21, 38, 0.98) 100%);
+            box-shadow: 12px 0 26px rgba(0, 0, 0, 0.26);
+        }
+
+        .nav-link:hover {
+            background: rgba(0, 212, 255, 0.08);
+            color: #7feaff;
+        }
+
+        .nav-link.active {
+            background: linear-gradient(90deg, rgba(8, 34, 57, 0.96), rgba(11, 47, 75, 0.96));
+            box-shadow: 0 10px 20px rgba(2, 8, 20, 0.24);
+        }
+
+        .main-content {
+            background:
+                radial-gradient(circle at top, rgba(0, 162, 255, 0.12) 0%, rgba(0, 162, 255, 0) 34%),
+                linear-gradient(180deg, #07111f 0%, #0a1628 56%, #09111d 100%);
+        }
+
+        .stream-page {
+            background:
+                radial-gradient(circle at top, rgba(0, 162, 255, 0.08) 0%, rgba(0, 162, 255, 0) 32%),
+                linear-gradient(180deg, rgba(5, 11, 20, 0.96) 0%, rgba(4, 8, 15, 0.98) 100%);
+        }
+
+        .stream-header {
+            background: linear-gradient(90deg, rgba(5, 16, 29, 0.98), rgba(8, 26, 46, 0.95));
+            border-bottom: 1px solid rgba(0, 162, 255, 0.2);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.34);
+        }
+
+        .stream-header-title {
+            color: #00d4ff;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.35);
+        }
+
+        .mode-btn {
+            border: 1px solid rgba(0, 162, 255, 0.22);
+            background: rgba(8, 20, 34, 0.82);
+            color: rgba(224, 240, 255, 0.76);
+            border-radius: 7px;
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(180deg, rgba(7, 26, 45, 0.98), rgba(12, 39, 64, 0.94));
+            border-color: rgba(0, 212, 255, 0.42);
+            color: #f4fbff;
+            box-shadow: inset 0 0 0 1px rgba(0, 212, 255, 0.14), 0 8px 18px rgba(2, 8, 20, 0.3);
+        }
+
+        .mode-btn:hover:not(.active) {
+            border-color: rgba(0, 212, 255, 0.34);
+            color: #eef8ff;
+            background: rgba(11, 28, 47, 0.92);
+        }
+
+        .stream-grid-view {
+            background: rgba(2, 7, 13, 0.98);
+        }
+
+        .stream-grid-item {
+            background: linear-gradient(180deg, rgba(4, 10, 18, 0.98), rgba(6, 14, 24, 0.96));
+            border: 1px solid rgba(0, 162, 255, 0.08);
+        }
+
+        .stream-grid-label {
+            background: linear-gradient(90deg, rgba(3, 16, 29, 0.94), rgba(7, 24, 42, 0.92));
+            border: 1px solid rgba(0, 162, 255, 0.18);
+            border-left: 3px solid #00d4ff;
+            color: #edf9ff;
+        }
+
+        .stream-grid-status {
+            background: #40d192;
+            box-shadow: 0 0 12px rgba(64, 209, 146, 0.75);
+        }
+
+        .stream-grid-status.offline {
+            background: #ff6c6c;
+            box-shadow: 0 0 12px rgba(255, 108, 108, 0.72);
+        }
+
+        .stream-task-panel {
+            background: linear-gradient(180deg, rgba(5, 15, 27, 0.98), rgba(7, 18, 32, 0.98));
+            border-top: 1px solid rgba(0, 162, 255, 0.18);
+            box-shadow: 0 -10px 24px rgba(0, 0, 0, 0.24);
+        }
+
+        .stream-task-panel::-webkit-scrollbar-thumb {
+            background: rgba(0, 212, 255, 0.32);
+        }
+
+        .stream-task-header {
+            color: rgba(150, 197, 228, 0.62);
+        }
+
+        .stream-task-item {
+            border: 1px solid rgba(0, 162, 255, 0.16);
+            border-radius: 8px;
+            background: rgba(8, 20, 34, 0.78);
+            color: rgba(232, 243, 255, 0.82);
+        }
+
+        .stream-task-item::before {
+            background: linear-gradient(90deg, rgba(8, 34, 57, 0.94), rgba(11, 47, 75, 0.96));
+        }
+
+        .stream-task-item:hover {
+            border-color: rgba(0, 212, 255, 0.28);
+            box-shadow: 0 10px 20px rgba(2, 8, 20, 0.24);
+        }
+
+        .stream-task-item.active {
+            border-color: rgba(0, 212, 255, 0.38);
+            background: linear-gradient(90deg, rgba(8, 34, 57, 0.96), rgba(11, 47, 75, 0.96));
+            box-shadow: inset 0 0 0 1px rgba(0, 212, 255, 0.12), 0 12px 22px rgba(2, 8, 20, 0.28);
+        }
+
+        .task-icon {
+            background: #40d192;
+            box-shadow: 0 0 8px rgba(64, 209, 146, 0.82);
+        }
+
+        .stream-task-item.offline .task-icon {
+            background: #ff7272;
+            box-shadow: 0 0 8px rgba(255, 114, 114, 0.82);
+        }
+
+        .info-page {
+            color: #dbe8ff;
+        }
+
+        .info-card,
+        .chart-container {
+            background: linear-gradient(180deg, rgba(10, 20, 34, 0.96), rgba(8, 15, 27, 0.94));
+            border: 1px solid rgba(0, 162, 255, 0.16);
+            box-shadow: 0 18px 36px rgba(2, 8, 20, 0.28);
+        }
+
+        .info-card-title,
+        .chart-title {
+            color: #edf6ff;
+        }
+
+        .info-card-title i,
+        .chart-title i {
+            color: #00d4ff;
+        }
+
+        .info-table td {
+            border-bottom: 1px solid rgba(0, 162, 255, 0.1);
+        }
+
+        .info-table td:first-child,
+        .info-table td:nth-child(3) {
+            color: #8fa9ca;
+        }
+
+        .info-table td:nth-child(2),
+        .info-table td:nth-child(4) {
+            color: #edf6ff;
+        }
+
+        .info-btn-primary {
+            background: linear-gradient(180deg, rgba(8, 31, 53, 0.96), rgba(8, 22, 37, 0.98));
+            color: #eef9ff;
+        }
+
+        .info-btn-success {
+            background: linear-gradient(180deg, rgba(15, 57, 43, 0.96), rgba(10, 36, 28, 0.98));
+            color: #dfffee;
+        }
+
+        .info-btn-danger {
+            background: linear-gradient(180deg, rgba(66, 24, 24, 0.96), rgba(44, 15, 15, 0.98));
+            color: #ffe5e5;
+        }
+    </style>
+    <link rel="stylesheet" href="pcb-theme.css?v=20260323-black3">
+</head>
+
+<body>
+    <!-- 侧边栏 -->
+    <div class="sidebar" id="sidebar">
+        <!-- 侧边栏头部 -->
+        <div class="sidebar-header">
+            <span class="sidebar-title">管理系统</span>
+            <button class="collapse-btn" id="collapseBtn">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+        </div>
+
+        <!-- 导航菜单 -->
+        <nav class="nav-menu">
+            <div class="nav-item">
+                <a class="nav-link" data-page="info">
+                    <i class="fas fa-info-circle"></i>
+                    <span>基本信息</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link" data-page="channel">
+                    <i class="fas fa-th-large"></i>
+                    <span>通道管理</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link" data-page="stream">
+                    <i class="fas fa-video"></i>
+                    <span>实时预览</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link" data-page="task">
+                    <i class="fas fa-tasks"></i>
+                    <span>任务管理</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link" data-page="faceManage">
+                    <i class="fas fa-user-check"></i>
+                    <span>人脸管理</span>
+                </a>
+            </div>
+            <!-- 智能设置已整合到任务管理中 -->
+            <!-- <div class="nav-item">
+                <a class="nav-link" data-page="smart">
+                    <i class="fas fa-brain"></i>
+                    <span>智能设置</span>
+                </a>
+            </div> -->
+            <div class="nav-item">
+                <a class="nav-link" data-page="network">
+                    <i class="fas fa-network-wired"></i>
+                    <span>网络配置</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link" data-page="alarm">
+                    <i class="fas fa-bell"></i>
+                    <span>告警管理</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link" data-page="params">
+                    <i class="fas fa-cogs"></i>
+                    <span>参数配置</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link" data-page="tfcard">
+                    <i class="bi bi-record-circle"></i>
+                    <span>视频录制</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link" data-page="videoPreview">
+                    <i class="bi bi-play-circle"></i>
+                    <span>视频预览</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link" data-page="statsRecord">
+                    <i class="bi bi-bar-chart-line"></i>
+                    <span>文件管理</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a class="nav-link" data-page="trackingRecord">
+                    <i class="bi bi-person-lines-fill"></i>
+                    <span>进出统计</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- 用户信息 -->
+        <div class="user-info">
+            <img src="user.jpg" alt="User" class="user-avatar" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%234a9eff%22%3E%3Cpath d=%22M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z%22/%3E%3C/svg%3E'">
+            <div class="user-details">
+                <div class="user-name">Admin</div>
+                <div class="user-role">系统管理员</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <!-- 实时预览页面 -->
+        <div class="content-page stream-page" id="streamPage">
+            <!-- 顶部工具栏 -->
+            <div class="stream-header">
+                <div class="stream-header-title">
+                    <i class="fas fa-video"></i>
+                    实时预览
+                </div>
+                <div class="stream-mode-switch">
+                    <button class="mode-btn active" id="gridModeBtn" onclick="switchToGridMode()">
+                        <i class="fas fa-th"></i>
+                        合流通道
+                    </button>
+                    <button class="mode-btn" id="singleModeBtn" onclick="backToGrid()">
+                        <i class="fas fa-expand"></i>
+                        返回合流
+                    </button>
+                </div>
+            </div>
+
+            <!-- 主视频区域 -->
+            <div class="stream-main-container">
+                <div class="stream-video-area">
+                    <!-- 合流视图（2x2四宫格） -->
+                    <div class="stream-grid-view" id="gridView">
+                        <div class="stream-grid-item" id="grid-0">
+                            <div class="stream-grid-label">通道 1</div>
+                            <div class="stream-grid-status"></div>
+                            <iframe class="stream-grid-iframe" id="grid-iframe-0"></iframe>
+                        </div>
+                        <div class="stream-grid-item" id="grid-1">
+                            <div class="stream-grid-label">通道 2</div>
+                            <div class="stream-grid-status offline"></div>
+                            <iframe class="stream-grid-iframe" id="grid-iframe-1"></iframe>
+                            <div class="stream-grid-empty">暂无信号</div>
+                        </div>
+                        <div class="stream-grid-item" id="grid-2">
+                            <div class="stream-grid-label">通道 3</div>
+                            <div class="stream-grid-status offline"></div>
+                            <iframe class="stream-grid-iframe" id="grid-iframe-2"></iframe>
+                            <div class="stream-grid-empty">暂无信号</div>
+                        </div>
+                        <div class="stream-grid-item" id="grid-3">
+                            <div class="stream-grid-label">通道 4</div>
+                            <div class="stream-grid-status offline"></div>
+                            <iframe class="stream-grid-iframe" id="grid-iframe-3"></iframe>
+                            <div class="stream-grid-empty">暂无信号</div>
+                        </div>
+                    </div>
+
+                    <!-- 单任务视图 -->
+                    <div class="stream-single-view" id="singleView">
+                        <div class="stream-content">
+                            <canvas id="stream-canvas-0" class="stream-canvas"></canvas>
+                            <iframe id="stream-iframe-0" class="stream-iframe" src=""></iframe>
+                            <div id="stream-tracking-overlay" class="tracking-overlay"></div>
+                        </div>
+                        <div class="stream-controls">
+                            <button id="stream-button" class="stream-button">
+                                <i class="fas fa-save"></i> 提交配置
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 任务通道列表 -->
+                <div class="stream-task-panel">
+                    <div class="stream-task-header">
+                        <i class="fas fa-list"></i>
+                        任务通道
+                    </div>
+                    <div class="stream-task-list" id="taskList">
+                        <!-- 动态加载任务列表 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 基本信息页面 -->
+        <div class="content-page info-page" id="infoPage">
+            <div class="info-card">
+                <div class="info-card-title">
+                    <i class="fas fa-server"></i>
+                    设备信息
+                </div>
+                <table class="info-table">
+                    <tr>
+                        <td>设备标识</td>
+                        <td id="deviceId">-</td>
+                        <td>授权状态</td>
+                        <td><span id="authStatus" class="status-badge status-authorized">已授权</span></td>
+                    </tr>
+                    <tr>
+                        <td>资源信息</td>
+                        <td id="storageInfo">-</td>
+                        <td>系统版本</td>
+                        <td id="systemVersion">-</td>
+                    </tr>
+                    <tr>
+                        <td>软件版本</td>
+                        <td id="softwareVersion">-</td>
+                        <td>盒子时间</td>
+                        <td id="systemTime">-</td>
+                    </tr>
+                    <tr>
+                        <td>GPS</td>
+                        <td id="gpsInfo">-</td>
+                        <td>芯片温度</td>
+                        <td id="chipTemp">-</td>
+                    </tr>
+                </table>
+                <div class="info-actions">
+                    <button class="info-btn info-btn-primary" onclick="queryDeviceInfo()">
+                        <i class="fas fa-sync"></i> 查询设备
+                    </button>
+                    <button class="info-btn info-btn-success" onclick="updateFirmware()">
+                        <i class="fas fa-cloud-upload-alt"></i> 更新固件
+                    </button>
+                    <button class="info-btn info-btn-danger" onclick="rebootDevice()">
+                        <i class="fas fa-power-off"></i> 重启设备
+                    </button>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-temperature-high"></i>
+                    芯片温度 (℃)
+                </div>
+                <canvas id="tempChart" height="80"></canvas>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-chart-line"></i>
+                    系统资源使用率 (%)
+                </div>
+                <canvas id="resourceChart" height="80"></canvas>
+            </div>
+        </div>
+
+        <!-- 通道管理页面 -->
+        <div class="content-page iframe-page" id="channelPage">
+            <iframe src="CmeraIp.html" frameborder="0" style="width: 100%; height: 100%;"></iframe>
+        </div>
+
+        <!-- 任务管理页面 -->
+        <div class="content-page iframe-page" id="taskPage">
+            <iframe src="task.html" frameborder="0" style="width: 100%; height: 100%;"></iframe>
+        </div>
+
+        <!-- 人脸管理页面 -->
+        <div class="content-page iframe-page" id="faceManagePage">
+            <iframe src="face_manage.html" frameborder="0" style="width: 100%; height: 100%;"></iframe>
+        </div>
+
+        <!-- 智能设置页面已整合到任务管理中 -->
+        <!-- <div class="content-page iframe-page" id="smartPage">
+            <iframe src="smart.html" frameborder="0" style="width: 100%; height: 100%;"></iframe>
+        </div> -->
+
+        <!-- 网络配置页面 -->
+        <div class="content-page iframe-page" id="networkPage">
+            <iframe src="network.html" frameborder="0" style="width: 100%; height: 100%;"></iframe>
+        </div>
+
+        <!-- 告警管理页面 -->
+        <div class="content-page iframe-page" id="alarmPage">
+            <iframe src="alarm.html" frameborder="0" style="width: 100%; height: 100%;"></iframe>
+        </div>
+
+        <!-- 参数配置页面 -->
+        <div class="content-page iframe-page" id="paramsPage">
+            <iframe src="params.html" frameborder="0" style="width: 100%; height: 100%;"></iframe>
+        </div>
+
+        <!-- 视频录制页面 -->
+        <div class="content-page iframe-page" id="tfcardPage">
+            <iframe src="TF.html" frameborder="0" style="width: 100%; height: 100%;"></iframe>
+        </div>
+
+        <!-- 视频预览页面 -->
+        <div class="content-page iframe-page" id="videoPreviewPage">
+            <iframe src="video_preview.html" frameborder="0" style="width: 100%; height: 100%;" id="videoPreviewFrame"></iframe>
+        </div>
+
+        <!-- 文件管理页面 -->
+        <div class="content-page iframe-page" id="statsRecordPage">
+            <iframe src="stats_record.html" frameborder="0" style="width: 100%; height: 100%;"></iframe>
+        </div>
+
+        <!-- 进出统计页面 -->
+        <div class="content-page iframe-page" id="trackingRecordPage">
+            <iframe src="tracking_record.html" frameborder="0" style="width: 100%; height: 100%;"></iframe>
+        </div>
+    </div>
+
+    <div class="modal fade firmware-modal" id="firmwareUpdateModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-cloud-upload-alt"></i> 版本升级</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="firmwareUpdateForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="firmwareCurrentVersion" class="form-label">当前版本</label>
+                            <input type="text" class="form-control" id="firmwareCurrentVersion" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <div class="firmware-list-panel">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="form-label mb-0">更新项列表（文件 + 目标目录）</label>
+                                    <button type="button" class="btn btn-sm btn-outline-info" id="firmwareAddRowBtn">
+                                        <i class="fas fa-plus"></i> 添加一项
+                                    </button>
+                                </div>
+                                <div class="firmware-help-text">填写绝对目录路径（不含文件名）。系统会按上传文件名在该目录下覆盖同名文件，不存在则新建。</div>
+                                <div class="firmware-list-scroll">
+                                    <div id="firmwareUploadRows"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">升级进度</label>
+                            <div class="progress" style="height: 16px;">
+                                <div id="firmwareProgressBar" class="progress-bar bg-info" role="progressbar" style="width: 0%">0%</div>
+                            </div>
+                            <div id="firmwareProgressText" class="firmware-help-text mt-2">等待开始</div>
+                        </div>
+                        <div id="firmwareUpdateStatus" class="alert firmware-status" role="alert"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-primary" id="firmwareSubmitBtn">开始升级</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== 侧边栏折叠功能 =====
+        const sidebar = document.getElementById('sidebar');
+        const collapseBtn = document.getElementById('collapseBtn');
+
+        collapseBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+        });
+
+        // ===== 页面切换功能 =====
+        const navLinks = document.querySelectorAll('.nav-link');
+        const contentPages = document.querySelectorAll('.content-page');
+
+        // 切换到指定页面
+        function switchToPage(pageName) {
+            // 移除所有活动状态
+            navLinks.forEach(l => l.classList.remove('active'));
+            contentPages.forEach(p => p.classList.remove('active'));
+            
+            // 找到对应的导航链接和页面
+            const targetLink = document.querySelector(`.nav-link[data-page="${pageName}"]`);
+            const targetPage = document.getElementById(pageName + 'Page');
+            
+            if (targetLink && targetPage) {
+                // 添加活动状态
+                targetLink.classList.add('active');
+                targetPage.classList.add('active');
+                
+                // 保存当前页面到localStorage
+                localStorage.setItem('currentPage', pageName);
+                
+                // 如果切换到实时预览页面，只初始化合流视图（不初始化Canvas，等用户点击任务时再初始化）
+                if (pageName === 'stream') {
+                    setTimeout(() => {
+                        if (typeof initGridView === 'function') {
+                            initGridView();
+                        }
+                    }, 150);
+                }
+                
+                // 如果切换到基本信息页面，初始化数据
+                if (pageName === 'info' && !window.infoPageInitialized) {
+                    initInfoPage();
+                    window.infoPageInitialized = true;
+                }
+                
+                // 如果切换到实时预览页面，重新初始化canvas
+                if (pageName === 'stream' && window.streamCanvas) {
+                    // 短暂延迟确保页面元素完全显示
+                    setTimeout(() => {
+                        window.streamCanvas.renderAll();
+                    }, 100);
+                }
+            }
+        }
+
+        function openRecordingPreview(relativePath) {
+            switchToPage('videoPreview');
+            const iframe = document.getElementById('videoPreviewFrame');
+            if (!iframe) {
+                return;
+            }
+
+            let targetSrc = 'video_preview.html';
+            if (relativePath) {
+                targetSrc += '?file=' + encodeURIComponent(relativePath) + '&ts=' + Date.now();
+            }
+            iframe.src = targetSrc;
+        }
+
+        window.openRecordingPreview = openRecordingPreview;
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                const pageName = link.getAttribute('data-page');
+                switchToPage(pageName);
+            });
+        });
+
+        // 页面加载时恢复上次打开的页面
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedPage = localStorage.getItem('currentPage');
+            const availablePages = Array.from(navLinks).map(link => link.getAttribute('data-page'));
+            if (savedPage && availablePages.includes(savedPage)) {
+                switchToPage(savedPage);
+            } else {
+                // 默认显示基本信息页
+                switchToPage('info');
+            }
+        });
+
+        // ===== 实时预览功能 =====
+        let currentStreamMode = 'grid'; // 'grid' or 'single'
+        let currentTaskId = null;
+        let currentStreamTaskMeta = null;
+        let streamTasks = [];
+        const streamWidth = 1920;
+        const streamHeight = 1080;  // 视频流原始高度（根据实际分辨率调整）
+
+        function isNoRoiAlgorithm(algorithm) {
+            // 旧版前端 polygon 红框已整体废弃，实时预览统一只看流内黄色 ROI/OSD 展示。
+            return true;
+        }
+
+        function isRegisteredPersonTrackingTask(task) {
+            return !!task && String(task.algorithm || '').trim() === 'registered_person_tracking';
+        }
+
+        function escapeHtml(value) {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function normalizeTrackingTimestampMs(value) {
+            const numeric = Number(value || 0);
+            if (!Number.isFinite(numeric) || numeric <= 0) {
+                return 0;
+            }
+            return numeric > 10000000000000 ? Math.floor(numeric / 1000) : Math.floor(numeric);
+        }
+
+        function formatTrackingTime(value) {
+            const normalized = normalizeTrackingTimestampMs(value);
+            if (!normalized) {
+                return '--';
+            }
+            const date = new Date(normalized);
+            if (Number.isNaN(date.getTime())) {
+                return '--';
+            }
+            return date.toLocaleTimeString('zh-CN', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        function formatTrackingDuration(value) {
+            const totalMs = Math.max(0, Math.floor(Number(value || 0)));
+            const totalSeconds = Math.floor(totalMs / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            if (hours > 0) {
+                return `${hours}小时${minutes}分${seconds}秒`;
+            }
+            if (minutes > 0) {
+                return `${minutes}分${seconds}秒`;
+            }
+            return `${seconds}秒`;
+        }
+
+        function getTrackingPanelElements() {
+            return {
+                overlay: document.getElementById('stream-tracking-overlay'),
+                panel: document.getElementById('trackingStatsPanel'),
+                summary: document.getElementById('trackingStatsSummary'),
+                list: document.getElementById('trackingStatsList'),
+                updated: document.getElementById('trackingStatsUpdated')
+            };
+        }
+
+        function clearRegisteredTrackingVisuals() {
+            const { overlay, panel, summary, list, updated } = getTrackingPanelElements();
+            if (overlay) {
+                overlay.innerHTML = '';
+            }
+            if (panel) {
+                panel.classList.remove('active');
+            }
+            if (summary) {
+                summary.innerHTML = '';
+            }
+            if (list) {
+                list.innerHTML = '';
+            }
+            if (updated) {
+                updated.textContent = '等待数据';
+            }
+        }
+
+        function renderRegisteredTrackingOverlay(taskStats) {
+            const { overlay } = getTrackingPanelElements();
+            if (!overlay) {
+                return;
+            }
+
+            overlay.innerHTML = '';
+        }
+
+        function renderRegisteredTrackingStats(taskStats) {
+            const { panel, summary, list, updated } = getTrackingPanelElements();
+            if (!panel || !summary || !list || !updated) {
+                return;
+            }
+
+            if (!taskStats) {
+                clearRegisteredTrackingVisuals();
+                return;
+            }
+
+            panel.classList.add('active');
+            updated.textContent = `更新时间 ${formatTrackingTime(taskStats.lastFrameTimestampMs)}`;
+            summary.innerHTML = `
+                <div class="tracking-stats-card">
+                    <div class="tracking-stats-card-label">当前登记人员</div>
+                    <div class="tracking-stats-card-value">${Number(taskStats.currentRegisteredPersonCount || 0)}</div>
+                </div>
+                <div class="tracking-stats-card">
+                    <div class="tracking-stats-card-label">活跃追踪目标</div>
+                    <div class="tracking-stats-card-value">${Number(taskStats.currentRegisteredTrackCount || 0)}</div>
+                </div>
+            `;
+
+            const persons = Array.isArray(taskStats.persons) ? taskStats.persons.slice() : [];
+            const activeTracks = (Array.isArray(taskStats.tracks) ? taskStats.tracks.slice() : [])
+                .filter(track => track && track.active)
+                .sort((a, b) => Number(b.lastSeenMs || 0) - Number(a.lastSeenMs || 0));
+            persons.sort((a, b) => {
+                if (!!b.currentInside !== !!a.currentInside) {
+                    return b.currentInside ? 1 : -1;
+                }
+                return Number(b.lastSeenMs || 0) - Number(a.lastSeenMs || 0);
+            });
+
+            if (!persons.length) {
+                if (!activeTracks.length) {
+                    list.innerHTML = '<div class="tracking-empty-state">当前区域内暂无已登记人员</div>';
+                    return;
+                }
+                list.innerHTML = activeTracks.map(track => {
+                    const state = String(track.recognitionState || 'confirmed');
+                    const stateText =
+                        state === 'pending' ? '待确认' :
+                        state === 'unknown' ? '未匹配' :
+                        state === 'observed' ? '已观察' : '已确认';
+                    const score = Number(track.bestScore || track.observedScore || 0);
+                    return `
+                        <div class="tracking-person-item">
+                            <div class="tracking-person-main">
+                                <div class="tracking-person-name">${escapeHtml(track.displayName || track.observedLabel || `Track ${track.trackId}`)}</div>
+                                <div class="tracking-person-meta">
+                                    轨迹 ID ${Number(track.trackId || 0)}<br>
+                                    识别分数 ${score > 0 ? score.toFixed(2) : '--'}<br>
+                                    最近出现 ${formatTrackingTime(track.lastSeenMs)}
+                                </div>
+                            </div>
+                            <div class="tracking-person-status ${state}">
+                                ${stateText}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                return;
+            }
+
+            list.innerHTML = persons.map(person => `
+                <div class="tracking-person-item">
+                    <div class="tracking-person-main">
+                        <div class="tracking-person-name">${escapeHtml(person.displayName || person.label || '未命名')}</div>
+                        <div class="tracking-person-meta">
+                            进入次数 ${Number(person.entries || 0)} 次<br>
+                            累计停留 ${formatTrackingDuration(person.totalDwellMs || 0)}<br>
+                            最近出现 ${formatTrackingTime(person.lastSeenMs)}
+                        </div>
+                    </div>
+                    <div class="tracking-person-status ${person.currentInside ? 'inside' : 'outside'}">
+                        ${person.currentInside ? '区域内' : '已离开'}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function refreshRegisteredTrackingStats() {
+            clearRegisteredTrackingVisuals();
+        }
+
+        function convertRtspToPreviewUrl(rtspUrl) {
+            const base = window.location.protocol + "//" + window.location.hostname + ":8889";
+            if (!rtspUrl) {
+                return '';
+            }
+            const rawPath = String(rtspUrl).replace(/^rtsp:\/\/[^/]+(?::\d+)?/, '');
+            if (!rawPath) {
+                return '';
+            }
+
+            // 兼容旧任务地址：/0_xxx -> /live/0_xxx/
+            let normalizedPath = rawPath;
+            if (/^\/0_\d+\/?$/.test(normalizedPath)) {
+                normalizedPath = '/live' + normalizedPath;
+                if (!normalizedPath.endsWith('/')) {
+                    normalizedPath += '/';
+                }
+            }
+
+            return base + normalizedPath;
+        }
+
+        function getTaskDisplayStreamUrl(task, channelId) {
+            if (task && task.outputRtsp) {
+                return convertRtspToPreviewUrl(task.outputRtsp);
+            }
+            if (channelId === null || channelId === undefined) {
+                return '';
+            }
+            const base = window.location.protocol + "//" + window.location.hostname + ":8889";
+            if (task && task.algorithm === 'face_recognition') {
+                return base + "/live/0_" + channelId + "/";
+            }
+            return base + "/0_" + channelId;
+        }
+
+        function getPreviewChannelId(task, channel) {
+            if (task && Number.isInteger(task.channelId)) {
+                return task.channelId;
+            }
+            if (channel) {
+                return channel.channelAssignment === '2' ? 10 : 20;
+            }
+            return null;
+        }
+
+        function buildGridPreviewItems(runningTasks, channels) {
+            const channelMap = new Map();
+            channels.forEach(channel => {
+                channelMap.set(channel.id, channel);
+            });
+
+            const items = [null, null, null, null];
+            let slotIndex = 0;
+
+            runningTasks.forEach(task => {
+                if (slotIndex >= items.length) {
+                    return;
+                }
+                items[slotIndex] = {
+                    task,
+                    channel: channelMap.get(task.videoSourceId) || null
+                };
+                slotIndex += 1;
+            });
+
+            return items;
+        }
+
+        function updateGridSlot(index, item) {
+            const iframe = document.getElementById(`grid-iframe-${index}`);
+            const statusDot = document.querySelector(`#grid-${index} .stream-grid-status`);
+            const emptyMsg = document.querySelector(`#grid-${index} .stream-grid-empty`);
+            const label = document.querySelector(`#grid-${index} .stream-grid-label`);
+
+            if (!iframe) {
+                return;
+            }
+
+            const task = item ? item.task : null;
+            const channel = item ? item.channel : null;
+            const channelId = getPreviewChannelId(task, channel);
+            let streamUrl = '';
+            let labelText = `通道 ${index + 1}`;
+
+            if (task && channelId !== null) {
+                streamUrl = getTaskDisplayStreamUrl(task, channelId);
+                labelText = channel && channel.name
+                    ? `${task.taskNumber || ('任务' + task.id)} - ${channel.name}`
+                    : (task.taskNumber || ('任务' + task.id));
+            } else if (channel && channel.url && channelId !== null) {
+                streamUrl = `${window.location.protocol}//${window.location.hostname}:8889/0_${channelId}`;
+                labelText = channel.name || `通道 ${index + 1}`;
+            }
+
+            const currentBaseUrl = (iframe.src || '').split('?')[0];
+            if (currentBaseUrl !== streamUrl) {
+                iframe.src = streamUrl;
+            }
+
+            if (label) {
+                label.textContent = labelText;
+            }
+
+            if (statusDot) {
+                if (streamUrl) {
+                    statusDot.classList.remove('offline');
+                    statusDot.classList.add('online');
+                } else {
+                    statusDot.classList.remove('online');
+                    statusDot.classList.add('offline');
+                }
+            }
+
+            if (emptyMsg) {
+                emptyMsg.style.display = streamUrl ? 'none' : 'block';
+            }
+        }
+
+        // 加载任务列表
+        function loadStreamTasks() {
+            axios.get('/api/tasks')
+                .then(response => {
+                    if (response.data.status === 'success') {
+                        streamTasks = response.data.tasks;
+                        if (currentTaskId) {
+                            currentStreamTaskMeta = streamTasks.find(task => task.id === currentTaskId) || null;
+                            if (!currentStreamTaskMeta || currentStreamTaskMeta.status !== 'running') {
+                                clearRegisteredTrackingVisuals();
+                            }
+                        }
+                        renderStreamTaskList();
+                    }
+                })
+                .catch(error => {
+                    console.error('加载任务失败:', error);
+                });
+        }
+
+        // 渲染任务列表
+        function renderStreamTaskList() {
+            const taskList = document.getElementById('taskList');
+            if (!taskList) return;
+            
+            taskList.innerHTML = '';
+
+            // 只显示运行中的任务
+            const runningTasks = streamTasks.filter(task => task.status === 'running');
+            
+            if (runningTasks.length === 0) {
+                taskList.innerHTML = '<div style="color: rgba(255,255,255,0.5); padding: 8px;">暂无运行中的任务</div>';
+                return;
+            }
+
+            runningTasks.forEach(task => {
+                const taskItem = document.createElement('div');
+                taskItem.className = 'stream-task-item';
+                
+                taskItem.innerHTML = `
+                    <div class="task-icon"></div>
+                    <span>${task.taskNumber || '任务' + task.id}</span>
+                `;
+                
+                taskItem.onclick = () => switchToStreamTask(task);
+                taskList.appendChild(taskItem);
+            });
+        }
+
+        // 切换到合流模式
+        function switchToGridMode() {
+            currentStreamMode = 'grid';
+            currentTaskId = null;
+            currentStreamTaskMeta = null;
+            document.getElementById('gridView').classList.remove('hidden');
+            document.getElementById('singleView').classList.remove('active');
+            document.getElementById('gridModeBtn').classList.add('active');
+            document.getElementById('singleModeBtn').classList.remove('active');
+            
+            // 清除任务选中状态
+            document.querySelectorAll('.stream-task-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            clearRegisteredTrackingVisuals();
+        }
+
+        // 返回合流视图
+        function backToGrid() {
+            switchToGridMode();
+        }
+
+        // 切换到单任务视图
+        function switchToStreamTask(task) {
+            currentStreamMode = 'single';
+            currentTaskId = task.id;
+            currentStreamTaskMeta = task;
+            
+            document.getElementById('gridView').classList.add('hidden');
+            document.getElementById('singleView').classList.add('active');
+            document.getElementById('gridModeBtn').classList.remove('active');
+            document.getElementById('singleModeBtn').classList.add('active');
+            
+            // 更新任务选中状态
+            document.querySelectorAll('.stream-task-item').forEach((item, index) => {
+                const runningTasks = streamTasks.filter(t => t.status === 'running');
+                if (runningTasks[index] && runningTasks[index].id === task.id) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+            
+            const canvas = document.getElementById('stream-canvas-0');
+            const button = document.getElementById('stream-button');
+
+            if (canvas) {
+                canvas.style.display = 'none';
+                canvas.style.pointerEvents = 'none';
+            }
+            if (button) {
+                button.style.display = 'none';
+            }
+
+            if (typeof streamCanvas !== 'undefined' && streamCanvas) {
+                try {
+                    streamCanvas.clear();
+                    streamCanvas.renderAll();
+                } catch (e) {
+                    console.log('清除旧版 ROI canvas 失败:', e);
+                }
+            }
+
+            if (!isRegisteredPersonTrackingTask(task)) {
+                clearRegisteredTrackingVisuals();
+            }
+            
+            // 加载该任务的视频流
+            loadStreamTaskVideo(task);
+            if (isRegisteredPersonTrackingTask(task)) {
+                refreshRegisteredTrackingStats();
+            }
+        }
+
+        // 加载任务视频流
+        function loadStreamTaskVideo(task) {
+            // 从channels.json获取视频源URL
+            axios.get('/api/channels')
+                .then(response => {
+                    if (response.data.status === 'success') {
+                        const channels = response.data.channels;
+                        const channel = channels.find(ch => ch.id === task.videoSourceId) || null;
+                        const channelId = getPreviewChannelId(task, channel);
+                        const iframe0 = document.getElementById('stream-iframe-0');
+                        const canvas0 = document.getElementById('stream-canvas-0');
+                        
+                        iframe0.src = getTaskDisplayStreamUrl(task, channelId);
+                        
+                        console.log('视频源已切换到:', iframe0.src);
+                        
+                        if (canvas0) {
+                            canvas0.style.display = 'none';
+                            canvas0.style.pointerEvents = 'none';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('加载视频源失败:', error);
+                });
+        }
+
+        // 初始化合流视图（4宫格）
+        function initGridView() {
+            axios.get('/api/channels')
+                .then(response => {
+                    if (response.data.status === 'success') {
+                        const channels = response.data.channels;
+                        console.log('加载通道列表:', channels);
+                        
+                        // 获取所有运行中的任务
+                        axios.get('/api/tasks').then(taskResponse => {
+                            const runningTasks = taskResponse.data.tasks.filter(t => t.status === 'running');
+                            console.log('运行中的任务:', runningTasks);
+
+                            const previewItems = buildGridPreviewItems(runningTasks, channels);
+                            for (let index = 0; index < 4; index += 1) {
+                                updateGridSlot(index, previewItems[index] || null);
+                            }
+                        }).catch(taskError => {
+                            console.error('加载运行中任务失败:', taskError);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('加载合流通道失败:', error);
+                });
+        }
+
+        // 页面加载时初始化任务列表和合流视图
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStreamTasks();
+            initGridView();
+            
+            // 定时刷新合流视图（每5秒）
+            setInterval(() => {
+                if (currentStreamMode === 'grid') {
+                    initGridView();
+                }
+            }, 5000);
+            
+            // 定时刷新任务列表（每3秒）
+            setInterval(() => {
+                loadStreamTasks();
+            }, 3000);
+
+            setInterval(() => {
+                refreshRegisteredTrackingStats();
+            }, 500);
+        });
+
+        function canvasPointToStreamPoint(iframe, point) {
+            const zmX = streamWidth / iframe.clientWidth;
+            const zmY = streamHeight / iframe.clientHeight;
+            return { 
+                x: parseInt(point.x * zmX), 
+                y: parseInt(point.y * zmY) 
+            };
+        }
+
+        function streamPointToCanvasPoint(iframe, point) {
+            const zmX = iframe.clientWidth / streamWidth;
+            const zmY = iframe.clientHeight / streamHeight;
+            console.log(`坐标转换: 原始(${point.x},${point.y}) zmX=${zmX.toFixed(3)} zmY=${zmY.toFixed(3)} → Canvas(${(point.x * zmX).toFixed(2)},${(point.y * zmY).toFixed(2)})`);
+            return { 
+                x: (point.x * zmX), 
+                y: (point.y * zmY) 
+            };
+        }
+
+        const debounce = (fn, delay) => {
+            let timer;
+            return function () {
+                if (timer) {
+                    clearTimeout(timer);
+                }
+                timer = setTimeout(() => {
+                    fn();
+                }, delay);
+            };
+        };
+
+        window.addEventListener(
+            "resize",
+            debounce(() => {
+                window.location.reload();
+            }, 100)
+        );
+
+        // Canvas初始化标志，避免重复初始化
+        let streamCanvasInitialized = false;
+
+        // 初始化实时预览页面的Canvas和多边形
+        function initStreamPage() {
+            const canvas0 = document.getElementById("stream-canvas-0");
+            const button = document.getElementById("stream-button");
+            if (canvas0) {
+                canvas0.style.display = 'none';
+                canvas0.style.pointerEvents = 'none';
+            }
+            if (button) {
+                button.style.display = 'none';
+            }
+            if (window.streamCanvas) {
+                window.streamCanvas.dispose();
+                window.streamCanvas = null;
+            }
+            streamCanvasInitialized = true;
+        }
+        
+        // 设置窗口resize监听器，动态调整Canvas和红框
+        function setupResizeListener() {
+            // 旧版前端 ROI 画布已移除，保留函数占位避免历史调用报错。
+        }
+
+        function initStreamCanvas(fabricCanvas, iframe0, button) {
+            if (fabricCanvas) {
+                try {
+                    fabricCanvas.clear();
+                    fabricCanvas.renderAll();
+                } catch (error) {
+                    console.warn('清理废弃的 ROI 画布失败:', error);
+                }
+            }
+            if (button) {
+                button.style.display = 'none';
+            }
+            if (iframe0) {
+                iframe0.style.pointerEvents = 'auto';
+            }
+            window.reloadStreamPolygon = null;
+        }
+
+        // ===== 基本信息页面功能 =====
+        let tempChart, resourceChart;
+        const MAX_DATA_POINTS = 20;
+
+        function initInfoPage() {
+            // 初始化温度图表
+            const tempCtx = document.getElementById('tempChart').getContext('2d');
+            tempChart = new Chart(tempCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: '芯片温度',
+                        data: [],
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 0,
+                            max: 100
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
+                    }
+                }
+            });
+
+            // 初始化资源使用率图表
+            const resourceCtx = document.getElementById('resourceChart').getContext('2d');
+            resourceChart = new Chart(resourceCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'CPU 使用率',
+                            data: [],
+                            borderColor: 'rgb(255, 99, 132)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            tension: 0.4,
+                            fill: false
+                        },
+                        {
+                            label: 'NPU 使用率',
+                            data: [],
+                            borderColor: 'rgb(54, 162, 235)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                            tension: 0.4,
+                            fill: false
+                        },
+                        {
+                            label: 'VPU 使用率',
+                            data: [],
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                            tension: 0.4,
+                            fill: false
+                        },
+                        {
+                            label: '内存使用率',
+                            data: [],
+                            borderColor: 'rgb(255, 206, 86)',
+                            backgroundColor: 'rgba(255, 206, 86, 0.1)',
+                            tension: 0.4,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            min: 0,
+                            max: 100
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
+                    }
+                }
+            });
+
+            // 获取初始设备信息
+            getDeviceInfo();
+            
+            // 立即更新一次数据
+            updateData();
+            
+            // 每2秒更新一次数据
+            setInterval(updateData, 2000);
+        }
+
+        // 更新图表数据
+        function updateChartData(chart, label, ...values) {
+            chart.data.labels.push(label);
+            
+            values.forEach((value, index) => {
+                chart.data.datasets[index].data.push(value);
+            });
+
+            if (chart.data.labels.length > MAX_DATA_POINTS) {
+                chart.data.labels.shift();
+                chart.data.datasets.forEach(dataset => {
+                    dataset.data.shift();
+                });
+            }
+
+            chart.update('none');
+        }
+
+        // 获取芯片温度
+        async function getChipTemp() {
+            try {
+                const response = await axios.get('/api/chip_temp');
+                return response.data.temperature;
+            } catch (error) {
+                console.error('获取芯片温度失败:', error);
+                return 50;
+            }
+        }
+
+        // 获取系统资源使用率
+        async function getSystemResources() {
+            try {
+                // 获取CPU和内存
+                const resourceResponse = await axios.get('/api/system_resources');
+                
+                // 获取真实的NPU和VPU使用率
+                let npuUsage = 0;
+                let vpuUsage = 0;
+                try {
+                    const npuResponse = await axios.get('/api/system/npu');
+                    if (npuResponse.data.status === 'success') {
+                        npuUsage = npuResponse.data.npuUsage || 0;
+                        vpuUsage = npuResponse.data.vpuUsage || 0;
+                    }
+                } catch (npuError) {
+                    console.error('获取NPU/VPU使用率失败:', npuError);
+                }
+                
+                return {
+                    cpu: resourceResponse.data.cpu || 0,
+                    npu: npuUsage,
+                    vpu: vpuUsage,
+                    memory: resourceResponse.data.memory || 0
+                };
+            } catch (error) {
+                console.error('获取系统资源失败:', error);
+                return { cpu: 0, npu: 0, vpu: 0, memory: 0 };
+            }
+        }
+
+        // 获取设备信息
+        async function getDeviceInfo() {
+            try {
+                const response = await axios.get('/api/device_info');
+                const data = response.data;
+                
+                document.getElementById('deviceId').textContent = data.deviceId || '-';
+                document.getElementById('storageInfo').textContent = data.storage || '-';
+                document.getElementById('systemVersion').textContent = data.systemVersion || '-';
+                document.getElementById('softwareVersion').textContent = data.softwareVersion || '-';
+                document.getElementById('gpsInfo').textContent = data.gps || '-';
+            } catch (error) {
+                console.error('获取设备信息失败:', error);
+            }
+        }
+
+        // 更新系统时间
+        function updateSystemTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleString('zh-CN', { 
+                year: 'numeric', 
+                month: '2-digit', 
+                day: '2-digit',
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit',
+                hour12: false 
+            });
+            document.getElementById('systemTime').textContent = timeStr;
+        }
+
+        // 定时更新数据
+        async function updateData() {
+            if (!tempChart || !resourceChart) return;
+            
+            const now = new Date();
+            const timeLabel = now.toLocaleTimeString('zh-CN', { hour12: false });
+
+            // 获取芯片温度
+            const temp = await getChipTemp();
+            document.getElementById('chipTemp').textContent = temp.toFixed(1) + ' ℃';
+            updateChartData(tempChart, timeLabel, temp);
+
+            // 获取系统资源
+            const resources = await getSystemResources();
+            updateChartData(resourceChart, timeLabel, resources.cpu, resources.npu, resources.vpu, resources.memory);
+
+            // 更新系统时间
+            updateSystemTime();
+        }
+
+        // 查询设备信息
+        function queryDeviceInfo() {
+            getDeviceInfo();
+            alert('设备信息已刷新');
+        }
+
+        const firmwareUpdateModalEl = document.getElementById('firmwareUpdateModal');
+        const firmwareUpdateModal = new bootstrap.Modal(firmwareUpdateModalEl);
+        const firmwareUpdateForm = document.getElementById('firmwareUpdateForm');
+        const firmwareUploadRows = document.getElementById('firmwareUploadRows');
+        const firmwareAddRowBtn = document.getElementById('firmwareAddRowBtn');
+        const firmwareCurrentVersionInput = document.getElementById('firmwareCurrentVersion');
+        const firmwareUpdateStatus = document.getElementById('firmwareUpdateStatus');
+        const firmwareProgressBar = document.getElementById('firmwareProgressBar');
+        const firmwareProgressText = document.getElementById('firmwareProgressText');
+        const firmwareSubmitBtn = document.getElementById('firmwareSubmitBtn');
+        const DEFAULT_FIRMWARE_TARGET_DIR = '/data/lintech/celectronicfence';
+
+        function showFirmwareStatus(message, type) {
+            firmwareUpdateStatus.className = 'alert firmware-status';
+            if (type === 'success') {
+                firmwareUpdateStatus.classList.add('alert-success');
+            } else if (type === 'error') {
+                firmwareUpdateStatus.classList.add('alert-danger');
+            } else {
+                firmwareUpdateStatus.classList.add('alert-info');
+            }
+            firmwareUpdateStatus.textContent = message;
+            firmwareUpdateStatus.style.display = 'block';
+        }
+
+        function refreshFirmwareRowIndices() {
+            const rows = firmwareUploadRows.querySelectorAll('.firmware-upload-row');
+            rows.forEach((row, index) => {
+                const indexEl = row.querySelector('.firmware-row-index');
+                if (indexEl) {
+                    indexEl.textContent = '更新项 ' + (index + 1);
+                }
+            });
+        }
+
+        function setFirmwareProgress(percent, text) {
+            const safePercent = Math.max(0, Math.min(100, Math.round(percent)));
+            firmwareProgressBar.style.width = safePercent + '%';
+            firmwareProgressBar.textContent = safePercent + '%';
+            firmwareProgressBar.setAttribute('aria-valuenow', String(safePercent));
+            if (text !== undefined) {
+                firmwareProgressText.textContent = text;
+            }
+        }
+
+        function createFirmwareUploadRow(initialTargetDir) {
+            const targetDir = initialTargetDir || DEFAULT_FIRMWARE_TARGET_DIR;
+            const row = document.createElement('div');
+            row.className = 'firmware-upload-row';
+            row.innerHTML = `
+                <div class="firmware-row-index">更新项</div>
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label class="form-label">固件文件</label>
+                        <input type="file" class="form-control firmware-file-input" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">目标目录路径</label>
+                        <input type="text" class="form-control firmware-dir-input" value="${targetDir}" required>
+                    </div>
+                    <div class="col-md-1 firmware-row-actions">
+                        <button type="button" class="btn btn-outline-danger firmware-remove-row" title="删除此项">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="firmware-row-status status-pending">状态：待执行</div>
+                <div class="firmware-row-detail-wrap">
+                    <button type="button" class="firmware-detail-toggle">查看失败详情</button>
+                    <div class="firmware-row-detail"></div>
+                </div>
+            `;
+
+            row.querySelector('.firmware-remove-row').addEventListener('click', () => {
+                if (firmwareUploadRows.children.length <= 1) {
+                    showFirmwareStatus('至少保留一条更新项。', 'error');
+                    return;
+                }
+                row.remove();
+                refreshFirmwareRowIndices();
+            });
+
+            const detailToggle = row.querySelector('.firmware-detail-toggle');
+            const detailBox = row.querySelector('.firmware-row-detail');
+            detailToggle.addEventListener('click', () => {
+                const expanded = detailBox.style.display === 'block';
+                detailBox.style.display = expanded ? 'none' : 'block';
+                detailToggle.textContent = expanded ? '查看失败详情' : '收起失败详情';
+            });
+
+            return row;
+        }
+
+        function setFirmwareRowStatus(row, status, message, detailMessage) {
+            const statusEl = row.querySelector('.firmware-row-status');
+            if (!statusEl) {
+                return;
+            }
+            const detailToggle = row.querySelector('.firmware-detail-toggle');
+            const detailBox = row.querySelector('.firmware-row-detail');
+            statusEl.className = 'firmware-row-status';
+            if (status === 'uploading') {
+                statusEl.classList.add('status-uploading');
+            } else if (status === 'success') {
+                statusEl.classList.add('status-success');
+            } else if (status === 'failed') {
+                statusEl.classList.add('status-failed');
+            } else if (status === 'skipped') {
+                statusEl.classList.add('status-skipped');
+            } else {
+                statusEl.classList.add('status-pending');
+            }
+            statusEl.textContent = message;
+
+            if (status === 'failed' && detailMessage) {
+                detailToggle.style.display = 'inline-block';
+                detailToggle.textContent = '查看失败详情';
+                detailBox.textContent = detailMessage;
+                detailBox.style.display = 'none';
+            } else {
+                detailToggle.style.display = 'none';
+                detailToggle.textContent = '查看失败详情';
+                detailBox.textContent = '';
+                detailBox.style.display = 'none';
+            }
+        }
+
+        function appendFirmwareUploadRow(initialTargetDir) {
+            firmwareUploadRows.appendChild(createFirmwareUploadRow(initialTargetDir));
+            refreshFirmwareRowIndices();
+        }
+
+        function resetFirmwareModal() {
+            firmwareUpdateForm.reset();
+            firmwareUpdateStatus.style.display = 'none';
+            firmwareSubmitBtn.disabled = false;
+            firmwareSubmitBtn.textContent = '开始升级';
+            firmwareUploadRows.innerHTML = '';
+            appendFirmwareUploadRow(DEFAULT_FIRMWARE_TARGET_DIR);
+            setFirmwareProgress(0, '等待开始');
+        }
+
+        async function parseFirmwareUploadResponse(response) {
+            const text = await response.text();
+            if (!text) {
+                return {};
+            }
+            try {
+                return JSON.parse(text);
+            } catch (error) {
+                return { message: text };
+            }
+        }
+
+        function uploadFirmwareItem(item, onProgress) {
+            return new Promise((resolve, reject) => {
+                const formData = new FormData();
+                formData.append('firmware', item.file);
+                formData.append('targetDir', item.targetDir);
+
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/api/firmware/upload', true);
+
+                xhr.upload.onprogress = function (event) {
+                    if (onProgress) {
+                        onProgress(event.loaded || 0, event.total || 0);
+                    }
+                };
+
+                xhr.onerror = function () {
+                    reject(new Error('网络异常，上传失败'));
+                };
+
+                xhr.onload = async function () {
+                    const response = {
+                        ok: xhr.status >= 200 && xhr.status < 300,
+                        status: xhr.status,
+                        text: async function () { return xhr.responseText || ''; }
+                    };
+                    const data = await parseFirmwareUploadResponse(response);
+                    if (!response.ok || data.status !== 'success') {
+                        reject(new Error(data.message || '固件升级失败'));
+                        return;
+                    }
+                    resolve(data);
+                };
+
+                xhr.send(formData);
+            });
+        }
+
+        async function submitFirmwareUpdate(event) {
+            event.preventDefault();
+
+            const rows = Array.from(firmwareUploadRows.querySelectorAll('.firmware-upload-row'));
+            if (rows.length === 0) {
+                showFirmwareStatus('请至少添加一条更新项。', 'error');
+                return;
+            }
+
+            const uploadItems = [];
+            for (let i = 0; i < rows.length; i++) {
+                const fileInput = rows[i].querySelector('.firmware-file-input');
+                const dirInput = rows[i].querySelector('.firmware-dir-input');
+                const targetDir = dirInput ? dirInput.value.trim() : '';
+
+                if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                    showFirmwareStatus('第 ' + (i + 1) + ' 项未选择固件文件。', 'error');
+                    return;
+                }
+                if (!targetDir) {
+                    showFirmwareStatus('第 ' + (i + 1) + ' 项未填写目标目录路径。', 'error');
+                    return;
+                }
+
+                uploadItems.push({
+                    row: rows[i],
+                    index: i + 1,
+                    file: fileInput.files[0],
+                    targetDir: targetDir,
+                    status: 'pending',
+                    savedPath: ''
+                });
+            }
+
+            uploadItems.forEach(item => {
+                setFirmwareRowStatus(item.row, 'pending', '状态：待执行');
+            });
+
+            if (!confirm('确定执行 ' + uploadItems.length + ' 项文件更新吗？')) {
+                return;
+            }
+
+            let completed = 0;
+            try {
+                firmwareSubmitBtn.disabled = true;
+                firmwareSubmitBtn.textContent = '上传中...';
+                showFirmwareStatus('开始执行批量更新，请稍候...', 'info');
+                setFirmwareProgress(0, '准备上传...');
+
+                const updatedTargets = [];
+                const totalBytes = Math.max(1, uploadItems.reduce((sum, item) => sum + (item.file.size || 0), 0));
+                let uploadedBaseBytes = 0;
+
+                for (let i = 0; i < uploadItems.length; i++) {
+                    const item = uploadItems[i];
+                    showFirmwareStatus('正在执行第 ' + (i + 1) + '/' + uploadItems.length + ' 项：' + item.file.name, 'info');
+                    setFirmwareRowStatus(item.row, 'uploading', '状态：上传中...');
+                    const itemSize = Math.max(1, item.file.size || 0);
+
+                    try {
+                        const data = await uploadFirmwareItem(item, (loaded, total) => {
+                            const effectiveTotal = total > 0 ? total : itemSize;
+                            const effectiveLoaded = Math.min(effectiveTotal, loaded);
+                            const itemProgress = effectiveTotal > 0 ? (effectiveLoaded / effectiveTotal) : 0;
+                            const doneBytes = uploadedBaseBytes + Math.round(itemSize * itemProgress);
+                            const percent = (doneBytes / totalBytes) * 100;
+                            setFirmwareProgress(percent, '正在上传第 ' + (i + 1) + '/' + uploadItems.length + ' 项：' + item.file.name);
+                        });
+
+                        completed++;
+                        uploadedBaseBytes += itemSize;
+                        item.status = 'success';
+                        item.savedPath = data.targetPath || (item.targetDir + '/' + item.file.name);
+                        setFirmwareRowStatus(item.row, 'success', '状态：成功 -> ' + item.savedPath);
+                        setFirmwareProgress((uploadedBaseBytes / totalBytes) * 100, '已完成第 ' + (i + 1) + '/' + uploadItems.length + ' 项');
+                        updatedTargets.push(item.savedPath);
+                    } catch (itemError) {
+                        item.status = 'failed';
+                        const detail = '失败原因：' + itemError.message +
+                                       '\n文件：' + item.file.name +
+                                       '\n目标目录：' + item.targetDir;
+                        setFirmwareRowStatus(item.row, 'failed', '状态：失败（点击查看详情）', detail);
+                        for (let j = i + 1; j < uploadItems.length; j++) {
+                            uploadItems[j].status = 'skipped';
+                            setFirmwareRowStatus(uploadItems[j].row, 'skipped', '状态：未执行（前一项失败后中断）');
+                        }
+                        throw new Error('第 ' + item.index + ' 项失败（' + item.file.name + '）：' + itemError.message);
+                    }
+                }
+
+                setFirmwareProgress(100, '全部上传完成');
+                showFirmwareStatus('批量更新成功，共完成 ' + completed + ' 项：' + updatedTargets.join('，') + '。请重启设备使更新生效。', 'success');
+            } catch (error) {
+                const successItems = uploadItems.filter(item => item.status === 'success');
+                const failedItem = uploadItems.find(item => item.status === 'failed');
+                const skippedCount = uploadItems.filter(item => item.status === 'skipped').length;
+                const successDesc = successItems.length > 0
+                    ? ('成功项：' + successItems.map(item => ('#' + item.index + ' ' + item.file.name)).join('，') + '。')
+                    : '成功项：无。';
+                const failedDesc = failedItem
+                    ? ('失败项：#' + failedItem.index + ' ' + failedItem.file.name + '。')
+                    : '失败项：未知。';
+                const progress = completed > 0 ? '（已完成 ' + completed + '/' + uploadItems.length + ' 项）' : '';
+                showFirmwareStatus('固件更新失败：' + error.message + progress + ' ' + successDesc + ' ' + failedDesc + (skippedCount > 0 ? (' 未执行：' + skippedCount + ' 项。') : ''), 'error');
+            } finally {
+                firmwareSubmitBtn.disabled = false;
+                firmwareSubmitBtn.textContent = '开始升级';
+            }
+        }
+
+        firmwareAddRowBtn.addEventListener('click', () => {
+            appendFirmwareUploadRow(DEFAULT_FIRMWARE_TARGET_DIR);
+        });
+        firmwareUpdateForm.addEventListener('submit', submitFirmwareUpdate);
+        firmwareUpdateModalEl.addEventListener('hidden.bs.modal', resetFirmwareModal);
+        resetFirmwareModal();
+
+        // 更新固件
+        function updateFirmware() {
+            resetFirmwareModal();
+            firmwareCurrentVersionInput.value = document.getElementById('softwareVersion').textContent || '未知';
+            firmwareUpdateModal.show();
+        }
+
+        // 重启设备
+        function rebootDevice() {
+            if (confirm('确定要重启设备吗？')) {
+                axios.post('/api/reboot').then(() => {
+                    alert('设备正在重启...');
+                }).catch(error => {
+                    alert('重启失败: ' + error.message);
+                });
+            }
+        }
+
+        // Bootstrap tooltip 初始化
+        (() => {
+            'use strict'
+            const tooltipTriggerList = Array.from(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            tooltipTriggerList.forEach(tooltipTriggerEl => {
+                new bootstrap.Tooltip(tooltipTriggerEl)
+            })
+        })();
+    </script>
+    <script src="fall-demo-preview-override.js"></script>
+</body>
+
+</html>

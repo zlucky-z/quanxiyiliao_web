@@ -1,0 +1,155 @@
+body {
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+}
+
+html {
+  height: -webkit-fill-available;
+}
+
+main {
+  height: 100vh;
+  height: -webkit-fill-available;
+  max-height: 100vh;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.dropdown-toggle { outline: 0; }
+
+.btn-toggle {
+  padding: .25rem .5rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, .65);
+  background-color: transparent;
+}
+.btn-toggle:hover,
+.btn-toggle:focus {
+  color: rgba(0, 0, 0, .85);
+  background-color: #d2f4ea;
+}
+
+.btn-toggle::before {
+  width: 1.25em;
+  line-height: 0;
+  content: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='rgba%280,0,0,.5%29' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M5 14l6-6-6-6'/%3e%3c/svg%3e");
+  transition: transform .35s ease;
+  transform-origin: .5em 50%;
+}
+
+.btn-toggle[aria-expanded="true"] {
+  color: rgba(0, 0, 0, .85);
+}
+.btn-toggle[aria-expanded="true"]::before {
+  transform: rotate(90deg);
+}
+
+.btn-toggle-nav a {
+  padding: .1875rem .5rem;
+  margin-top: .125rem;
+  margin-left: 1.25rem;
+}
+.btn-toggle-nav a:hover,
+.btn-toggle-nav a:focus {
+  background-color: #d2f4ea;
+}
+
+.scrollarea {
+  overflow-y: auto;
+}
+
+.sidebar-demo-body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(0, 212, 255, 0.08), transparent 26%),
+    radial-gradient(circle at 88% 10%, rgba(56, 189, 248, 0.08), transparent 20%),
+    linear-gradient(135deg, var(--pcb-bg-deep) 0%, var(--pcb-bg-mid) 52%, #030915 100%) !important;
+  color: var(--pcb-text);
+}
+
+.sidebar-demo-main {
+  min-height: 100vh;
+  background: transparent;
+}
+
+.sidebar-demo-panel {
+  width: 280px !important;
+  background:
+    radial-gradient(circle at top right, rgba(0, 212, 255, 0.08), transparent 34%),
+    linear-gradient(180deg, rgba(5, 12, 24, 0.98), rgba(10, 24, 48, 0.96), rgba(4, 10, 20, 0.98)) !important;
+  border-right: 1px solid rgba(0, 162, 255, 0.16);
+  box-shadow: 12px 0 28px rgba(0, 0, 0, 0.34);
+}
+
+.sidebar-demo-panel hr,
+.dropdown-divider {
+  border-color: rgba(0, 162, 255, 0.12) !important;
+  opacity: 1;
+}
+
+.sidebar-demo-panel .fs-4,
+.sidebar-demo-panel strong {
+  color: var(--pcb-text) !important;
+}
+
+.sidebar-demo-panel .nav-item {
+  margin: 5px 0;
+}
+
+.sidebar-demo-panel .nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  color: var(--pcb-text-soft) !important;
+  border: 1px solid transparent;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.sidebar-demo-panel .nav-link:hover,
+.sidebar-demo-panel .nav-link:focus {
+  background: linear-gradient(90deg, rgba(0, 162, 255, 0.18), rgba(0, 162, 255, 0.05)) !important;
+  color: var(--pcb-accent) !important;
+  border-color: rgba(0, 212, 255, 0.12);
+  transform: translateX(2px);
+}
+
+.sidebar-demo-panel .nav-link.active {
+  background: linear-gradient(90deg, rgba(8, 34, 57, 0.96), rgba(11, 47, 75, 0.96)) !important;
+  color: #ecfeff !important;
+  border-color: rgba(125, 211, 252, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(0, 212, 255, 0.12), 0 12px 22px rgba(2, 8, 20, 0.28);
+}
+
+.sidebar-demo-panel .bi {
+  color: inherit;
+}
+
+.sidebar-demo-panel .dropdown-toggle {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 162, 255, 0.12);
+  background: rgba(8, 20, 40, 0.62);
+}
+
+.sidebar-demo-panel .dropdown-toggle:hover,
+.sidebar-demo-panel .dropdown-toggle:focus {
+  border-color: rgba(0, 212, 255, 0.22);
+  color: var(--pcb-accent) !important;
+}
+
+.sidebar-demo-panel .rounded-circle {
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  box-shadow: 0 8px 18px rgba(0, 162, 255, 0.18);
+}
+
+.b-example-divider,
+.b-example-vr {
+  background: linear-gradient(180deg, rgba(5, 16, 32, 0.92), rgba(8, 20, 40, 0.86)) !important;
+  border: solid rgba(0, 162, 255, 0.14) !important;
+  border-width: 1px 0;
+  box-shadow:
+    inset 0 0.5em 1.5em rgba(0, 0, 0, 0.28),
+    inset 0 0.125em 0.5em rgba(0, 0, 0, 0.2);
+}

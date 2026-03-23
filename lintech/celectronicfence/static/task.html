@@ -1,0 +1,2418 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务管理</title>
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="fontawesome-all.min.css">
+    <script src="axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background:
+                radial-gradient(circle at top, rgba(0, 162, 255, 0.18) 0%, rgba(0, 162, 255, 0) 34%),
+                linear-gradient(180deg, #07111f 0%, #0a1628 56%, #09111d 100%);
+            color: #dbe8ff;
+            height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 95%;
+            width: 100%;
+            margin: 0 auto;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        
+        @media (min-width: 1400px) {
+            .container {
+                max-width: 1800px;
+            }
+        }
+
+        /* 头部区域 */
+        .container > .header {
+            background: linear-gradient(90deg, rgba(0, 30, 60, 0.62), rgba(0, 50, 100, 0.45)) !important;
+            padding: 9px 14px !important;
+            border-radius: 8px !important;
+            border: 1px solid rgba(0, 162, 255, 0.35) !important;
+            box-shadow: 0 0 18px rgba(0, 162, 255, 0.22) !important;
+            margin-bottom: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            min-height: 48px;
+        }
+
+        .container > .header .header-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #00d4ff !important;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            line-height: 1.1;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .container > .header .header-title i {
+            color: #00d4ff !important;
+            font-size: 17px;
+        }
+
+        .container > .header .btn-add {
+            padding: 8px 14px !important;
+            border-radius: 7px !important;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            line-height: 1;
+            box-shadow: 0 8px 18px rgba(0, 162, 255, 0.18) !important;
+        }
+
+        .container > .header .btn-add:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 22px rgba(0, 162, 255, 0.22) !important;
+        }
+
+        /* 任务列表 */
+        .tasks-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tasks-scroll-area {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .tasks-scroll-area::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .tasks-scroll-area::-webkit-scrollbar-thumb {
+            background: rgba(0, 162, 255, 0.35);
+            border-radius: 999px;
+        }
+
+        .tasks-scroll-area::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .tasks-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .tasks-table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .tasks-table th {
+            padding: 18px 20px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: inherit;
+        }
+
+        .tasks-table th:last-child,
+        .tasks-table td:last-child {
+            text-align: right;
+            padding-right: 28px;
+            white-space: nowrap;
+        }
+
+        .tasks-table tbody tr {
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.2s;
+            position: relative;
+            z-index: 0;
+        }
+
+        .tasks-table tbody tr:hover {
+            background: #f8f9ff;
+        }
+
+        .tasks-table td {
+            padding: 18px 20px;
+            color: #666;
+        }
+
+        .task-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 15px;
+        }
+
+        /* 状态标签 */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-running {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-stopped {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-badge i {
+            font-size: 8px;
+        }
+
+        /* 操作按钮 */
+        .action-btns {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 12px;
+            flex-wrap: nowrap;
+            width: 100%;
+            margin-left: auto;
+        }
+
+        .btn-action {
+            min-width: 74px;
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid #d6deec;
+            background: #fff;
+            color: #3f4f68;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.2;
+            flex: 0 0 auto;
+        }
+
+        .btn-action:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(89, 104, 140, 0.12);
+        }
+
+        .btn-start {
+            border-color: #b9deca;
+            color: #18794e;
+            background: #f4fcf7;
+        }
+
+        .btn-start:hover {
+            background: #e8f7ee;
+        }
+
+        .btn-stop {
+            border-color: #ffd4c9;
+            color: #d84f3f;
+            background: #fff6f4;
+        }
+
+        .btn-stop:hover {
+            background: #ffefeb;
+        }
+
+        .btn-edit {
+            border-color: #c6ddff;
+            color: #2366d1;
+            background: #f3f8ff;
+        }
+
+        .btn-edit:hover {
+            background: #e8f1ff;
+        }
+
+        .btn-options {
+            min-width: 86px;
+        }
+
+        .btn-caret {
+            font-size: 11px;
+            margin-left: 6px;
+        }
+
+        .options-menu-wrap {
+            position: relative;
+        }
+
+        .options-floating-menu {
+            position: fixed;
+            min-width: 152px;
+            background: #fff;
+            border: 1px solid #d6deec;
+            border-radius: 12px;
+            padding: 8px;
+            box-shadow: 0 16px 32px rgba(24, 36, 72, 0.18);
+            display: none;
+            z-index: 20000;
+        }
+
+        .options-floating-menu.show {
+            display: block;
+        }
+
+        .options-menu-item {
+            width: 100%;
+            border: none;
+            background: #fff;
+            color: #34445e;
+            border-radius: 8px;
+            padding: 10px 12px;
+            text-align: left;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+
+        .options-menu-item + .options-menu-item {
+            margin-top: 4px;
+        }
+
+        .options-menu-item:hover {
+            background: #f3f6fc;
+        }
+
+        .options-menu-item.delete-item {
+            color: #cf4636;
+        }
+
+        .options-menu-item.disabled,
+        .options-menu-item:disabled {
+            background: #f7f9fc;
+            color: #a7b0c3;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* 模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            justify-content: center;
+            align-items: flex-start;
+            overflow-y: auto;
+            padding: 24px 0;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 900px;
+            max-height: calc(100vh - 48px);
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            animation: modalSlideIn 0.3s ease;
+            margin: 0 20px;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            padding: 25px 30px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-title i {
+            color: #667eea;
+        }
+
+        .btn-close {
+            background: transparent;
+            border: none;
+            font-size: 24px;
+            color: #999;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .btn-close:hover {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .form-control, .form-select, .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus, .form-select:focus, .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-select {
+            background: white;
+            cursor: pointer;
+        }
+
+        .threshold-config {
+            width: 100%;
+        }
+
+        /* 算法选择 */
+        .algorithm-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .algorithm-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .algorithm-card:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .algorithm-card.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .algorithm-card i {
+            font-size: 32px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .algorithm-card.selected i {
+            color: white;
+        }
+
+        .algorithm-name {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .modal-footer {
+            padding: 20px 30px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: #999;
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .empty-state i {
+            font-size: 64px;
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+
+        .empty-state h3 {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+            color: #999;
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 18px;
+            right: 18px;
+            z-index: 10050;
+        }
+
+        .toast-item {
+            background: rgba(10, 20, 40, 0.95);
+            border: 1px solid rgba(0, 162, 255, 0.5);
+            color: #eaf4ff;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-bottom: 10px;
+            min-width: 260px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            animation: slide-in 0.25s ease;
+        }
+
+        .toast-item.success {
+            border-color: rgba(0, 200, 81, 0.5);
+        }
+
+        .toast-item.error {
+            border-color: rgba(255, 68, 68, 0.5);
+        }
+
+        .toast-item.info {
+            border-color: rgba(0, 162, 255, 0.5);
+        }
+
+        #taskModal {
+            padding: 8px 0;
+            align-items: center;
+        }
+
+        #taskModal .modal-content {
+            width: min(1120px, calc(100vw - 18px));
+            max-width: none;
+            max-height: calc(100vh - 16px);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        #taskModal .modal-header {
+            padding: 8px 14px !important;
+            background: linear-gradient(180deg, rgba(12, 21, 34, 0.99) 0%, rgba(10, 18, 29, 0.99) 100%) !important;
+            border-bottom: 1px solid rgba(65, 90, 127, 0.18) !important;
+            min-height: 0;
+        }
+
+        #taskModal .modal-title {
+            font-size: 15px !important;
+            gap: 8px;
+            color: #e7eef8 !important;
+        }
+
+        #taskModal .modal-title i {
+            color: #8fb2ff !important;
+            font-size: 15px;
+        }
+
+        #taskModal .btn-close {
+            width: 28px;
+            height: 28px;
+            border-radius: 7px;
+            background: rgba(18, 30, 46, 0.98) !important;
+            border: 1px solid rgba(70, 95, 131, 0.2) !important;
+            color: #9db0c8 !important;
+            font-size: 14px;
+        }
+
+        #taskModal .btn-close:hover {
+            background: rgba(26, 42, 63, 0.99) !important;
+            color: #cfe0ff !important;
+        }
+
+        #taskModal .modal-body {
+            padding: 16px 18px 12px;
+            overflow-y: auto;
+        }
+
+        #taskModal .modal-footer {
+            padding: 10px 18px !important;
+            background: rgba(10, 18, 29, 0.98);
+            border-top: 1px solid rgba(65, 90, 127, 0.18) !important;
+        }
+
+        #taskModal .section-title {
+            font-size: 15px !important;
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(38, 132, 255, 0.42);
+        }
+
+        #taskModal .section-title[style] {
+            margin-top: 16px !important;
+        }
+
+        #taskModal .form-row {
+            gap: 14px;
+            margin-bottom: 12px;
+        }
+
+        #taskModal .form-group {
+            margin-bottom: 12px;
+        }
+
+        #taskModal .form-label {
+            margin-bottom: 6px;
+            font-size: 13px;
+        }
+
+        #taskModal .form-control,
+        #taskModal .form-select,
+        #taskModal .form-input {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(122, 136, 158, 0.18) !important;
+            background: rgba(10, 13, 18, 0.96) !important;
+            color: #edf4ff !important;
+            box-shadow: none !important;
+        }
+
+        #taskModal .form-control::placeholder,
+        #taskModal .form-input::placeholder {
+            color: #6e86a8;
+        }
+
+        #taskModal .form-control:focus,
+        #taskModal .form-select:focus,
+        #taskModal .form-input:focus {
+            border-color: rgba(160, 178, 202, 0.24) !important;
+            background: rgba(14, 17, 22, 0.98) !important;
+            box-shadow: 0 0 0 2px rgba(94, 106, 126, 0.12) !important;
+        }
+
+        #taskModal .form-select {
+            color-scheme: dark;
+            background-color: rgba(10, 13, 18, 0.96) !important;
+        }
+
+        #taskModal .form-help {
+            display: none;
+        }
+
+        #taskModal .compact-note {
+            margin-top: 4px;
+            font-size: 11px;
+            line-height: 1.35;
+            color: #8da3c1;
+        }
+
+        #taskModal .algorithm-grid {
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        #taskModal .algorithm-card {
+            padding: 10px 8px;
+            border-radius: 10px;
+            border: 1px solid rgba(122, 136, 158, 0.16);
+            background: linear-gradient(180deg, rgba(16, 19, 25, 0.96), rgba(10, 13, 18, 0.96));
+            color: #e8f1fb;
+        }
+
+        #taskModal .algorithm-card i {
+            font-size: 24px;
+            margin-bottom: 8px;
+            color: #d8e6f5;
+        }
+
+        #taskModal .algorithm-name {
+            font-size: 12px;
+            color: #edf4ff;
+        }
+
+        #taskModal .algorithm-card:hover {
+            border-color: rgba(150, 166, 189, 0.22);
+            background: linear-gradient(180deg, rgba(23, 27, 34, 0.98), rgba(13, 16, 21, 0.98));
+            color: #f4f8ff;
+            box-shadow: 0 10px 18px rgba(0, 0, 0, 0.24);
+        }
+
+        #taskModal .algorithm-card:hover i,
+        #taskModal .algorithm-card:hover .algorithm-name {
+            color: #f4f8ff;
+        }
+
+        #taskModal .algorithm-card.selected {
+            border-color: rgba(166, 179, 199, 0.24);
+            background: linear-gradient(180deg, rgba(29, 34, 42, 0.98), rgba(14, 17, 22, 0.99));
+            color: #ffffff;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        #taskModal .algorithm-card.selected i,
+        #taskModal .algorithm-card.selected .algorithm-name {
+            color: #ffffff;
+        }
+
+        #taskModal #demoModeConfig {
+            margin-top: 12px !important;
+        }
+
+        @media (max-width: 900px) {
+            #taskModal .modal-content {
+                width: calc(100vw - 12px);
+                max-height: calc(100vh - 10px);
+            }
+
+            #taskModal .form-row {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            #taskModal .algorithm-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .tasks-table th:last-child,
+            .tasks-table td:last-child {
+                padding-right: 20px;
+            }
+
+            .action-btns {
+                gap: 8px;
+            }
+        }
+
+        @keyframes slide-in {
+            from {
+                transform: translateX(260px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        .container .tasks-container {
+            background: linear-gradient(180deg, rgba(10, 20, 34, 0.96), rgba(8, 15, 27, 0.94));
+            border: 1px solid rgba(0, 162, 255, 0.16);
+            box-shadow: 0 18px 36px rgba(2, 8, 20, 0.34);
+        }
+
+        .container .tasks-table thead {
+            background: linear-gradient(90deg, rgba(5, 16, 29, 0.98), rgba(8, 26, 46, 0.95));
+            color: #edf6ff;
+        }
+
+        .container .tasks-table th {
+            color: #7feaff;
+        }
+
+        .container .tasks-table tbody tr {
+            border-bottom: 1px solid rgba(0, 162, 255, 0.1);
+        }
+
+        .container .tasks-table tbody tr:hover {
+            background: rgba(0, 162, 255, 0.08);
+        }
+
+        .container .tasks-table td {
+            color: #cfe0f7;
+        }
+
+        .container .task-name {
+            color: #edf6ff;
+        }
+
+        .container .status-running {
+            background: rgba(72, 209, 146, 0.14);
+            color: #b7ffd8;
+        }
+
+        .container .status-stopped {
+            background: rgba(255, 108, 108, 0.14);
+            color: #ffc1c1;
+        }
+
+        .container .btn-action {
+            border-color: rgba(0, 162, 255, 0.18);
+            background: rgba(8, 20, 34, 0.78);
+            color: #dbe8ff;
+            box-shadow: none;
+        }
+
+        .container .btn-start {
+            border-color: rgba(72, 209, 146, 0.22);
+            color: #b7ffd8;
+            background: rgba(72, 209, 146, 0.12);
+        }
+
+        .container .btn-stop {
+            border-color: rgba(255, 108, 108, 0.22);
+            color: #ffc1c1;
+            background: rgba(255, 108, 108, 0.12);
+        }
+
+        .container .btn-edit {
+            border-color: rgba(0, 212, 255, 0.22);
+            color: #d9f6ff;
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        .container .options-floating-menu {
+            background: linear-gradient(180deg, rgba(10, 20, 34, 0.98), rgba(8, 15, 27, 0.96));
+            border: 1px solid rgba(0, 162, 255, 0.18);
+            box-shadow: 0 22px 40px rgba(2, 8, 20, 0.34);
+        }
+
+        .container .options-menu-item {
+            background: transparent;
+            color: #dbe8ff;
+        }
+
+        .container .options-menu-item:hover {
+            background: rgba(0, 212, 255, 0.08);
+        }
+
+        .container .options-menu-item.delete-item {
+            color: #ffc1c1;
+        }
+
+        .container .options-menu-item.disabled,
+        .container .options-menu-item:disabled {
+            background: rgba(255, 255, 255, 0.03);
+            color: #6f8caf;
+        }
+
+        .modal .modal-content {
+            background: linear-gradient(180deg, rgba(10, 20, 34, 0.98), rgba(8, 15, 27, 0.96));
+            border: 1px solid rgba(0, 162, 255, 0.18);
+            box-shadow: 0 22px 40px rgba(2, 8, 20, 0.42);
+        }
+
+        .modal .modal-header {
+            border-bottom: 1px solid rgba(0, 162, 255, 0.14);
+            background: linear-gradient(90deg, rgba(5, 16, 29, 0.96), rgba(8, 26, 46, 0.92));
+        }
+
+        .modal .modal-title,
+        .modal .section-title {
+            color: #edf6ff;
+        }
+
+        .modal .modal-title i {
+            color: #00d4ff;
+        }
+
+        .modal .section-title {
+            border-bottom-color: rgba(0, 212, 255, 0.18);
+        }
+
+        .modal .btn-close:hover {
+            background: rgba(0, 212, 255, 0.1);
+            color: #edf6ff;
+        }
+
+        .modal .form-label {
+            color: #dbe8ff;
+        }
+
+        .modal .form-control,
+        .modal .form-select,
+        .modal .form-input {
+            background: rgba(5, 10, 25, 0.82);
+            border: 1px solid rgba(0, 162, 255, 0.28);
+            color: #edf6ff;
+        }
+
+        .modal .form-control:focus,
+        .modal .form-select:focus,
+        .modal .form-input:focus {
+            border-color: rgba(0, 212, 255, 0.42);
+            box-shadow: 0 0 0 3px rgba(0, 162, 255, 0.14);
+            background: rgba(8, 14, 30, 0.92);
+        }
+
+        .modal .algorithm-card {
+            border-color: rgba(0, 162, 255, 0.16);
+            background: rgba(8, 20, 34, 0.78);
+            color: #dbe8ff;
+        }
+
+        .modal .algorithm-card:hover {
+            border-color: rgba(0, 212, 255, 0.28);
+            background: rgba(0, 212, 255, 0.08);
+        }
+
+        .modal .algorithm-card.selected {
+            border-color: rgba(0, 212, 255, 0.34);
+            background: linear-gradient(180deg, rgba(8, 31, 53, 0.96), rgba(8, 22, 37, 0.98));
+            color: #eef9ff;
+        }
+    </style>
+    <link rel="stylesheet" href="pcb-theme.css?v=20260323-black3">
+</head>
+
+<body>
+    <div class="toast-container" id="toastContainer"></div>
+    <div class="options-floating-menu" id="taskOptionsMenu"></div>
+
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <div class="header-title">
+                <i class="fas fa-tasks"></i>
+                任务管理
+            </div>
+            <button class="btn-add" onclick="openAddModal()">
+                <i class="fas fa-plus"></i>
+                新增任务
+            </button>
+        </div>
+
+        <!-- 任务列表 -->
+        <div class="tasks-container">
+            <div class="tasks-scroll-area">
+                <table class="tasks-table">
+                    <thead>
+                        <tr>
+                            <th>任务编号</th>
+                            <th>任务描述</th>
+                            <th>视频源</th>
+                            <th>算法</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tasksTableBody">
+                        <!-- 动态加载 -->
+                    </tbody>
+                </table>
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <i class="fas fa-clipboard-list"></i>
+                    <h3>暂无任务</h3>
+                    <p>点击右上角"新增任务"按钮创建您的第一个任务</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增/编辑任务模态框 -->
+    <div class="modal" id="taskModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-plus-circle"></i>
+                    <span id="modalTitle">新增任务</span>
+                </div>
+                <button class="btn-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="taskForm">
+                    <!-- 基本配置 -->
+                    <div class="section-title">基本配置</div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">任务编号</label>
+                            <input type="text" class="form-control" id="taskNumber" placeholder="例如：TASK001" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">视频源</label>
+                            <select class="form-select" id="taskVideoSource" required>
+                                <option value="">请选择视频源</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label class="form-label">任务描述</label>
+                        <input type="text" class="form-control" id="taskDescription" placeholder="描述此任务的用途">
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label class="form-label">
+                            <i class="fas fa-cloud-upload-alt" style="color: #667eea; margin-right: 8px;"></i>
+                            远程上报地址 (可选)
+                        </label>
+                        <input type="text" class="form-control" id="taskRemoteUrl" placeholder="例如: http://192.168.1.100:8080/api/alarm">
+                        <div class="compact-note">全局地址优先，未设置时使用此处地址。</div>
+                    </div>
+
+                    <!-- 算法设置 -->
+                    <div class="section-title">算法设置</div>
+                    
+                    <div class="algorithm-grid" id="algorithmGrid">
+                        <div class="algorithm-card" data-algorithm="region_intrusion">
+                            <i class="fas fa-shield-alt"></i>
+                            <div class="algorithm-name">区域入侵</div>
+                        </div>
+                        <div class="algorithm-card" data-algorithm="person_detection">
+                            <i class="fas fa-user-check"></i>
+                            <div class="algorithm-name">人员检测</div>
+                        </div>
+                        <div class="algorithm-card" data-algorithm="明烟明火">
+                            <i class="fas fa-fire"></i>
+                            <div class="algorithm-name">明烟明火</div>
+                        </div>
+                        <div class="algorithm-card" data-algorithm="打架检测">
+                            <i class="fas fa-fist-raised"></i>
+                            <div class="algorithm-name">打架检测</div>
+                        </div>
+                        <div class="algorithm-card" data-algorithm="跌倒检测">
+                            <i class="fas fa-user-injured"></i>
+                            <div class="algorithm-name">跌倒检测</div>
+                        </div>
+                        <div class="algorithm-card" data-algorithm="face_recognition">
+                            <i class="fas fa-user-tag"></i>
+                            <div class="algorithm-name">人脸识别</div>
+                        </div>
+                        <div class="algorithm-card" data-algorithm="registered_person_tracking">
+                            <i class="fas fa-user-shield"></i>
+                            <div class="algorithm-name">登记人员追踪</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group full-width" id="demoModeConfig" style="display: none; margin-top: 20px;">
+                        <label class="form-label">
+                            <i class="fas fa-play-circle" style="color: #667eea; margin-right: 8px;"></i>
+                            演示模式
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 8px;">
+                            <input type="checkbox" id="taskDemoMode" style="width: 18px; height: 18px; cursor: pointer;">
+                            <span>开启后，预览界面循环播放演示视频</span>
+                        </label>
+                        <div class="compact-note">仅打架检测和跌倒检测生效。</div>
+                    </div>
+
+                    <!-- 算法参数配置 -->
+                    <div class="section-title" style="margin-top: 30px;">算法参数</div>
+                    
+                    <!-- 区域入侵阈值 -->
+                    <div class="form-group threshold-config" id="regionIntrusionConfig" style="display: none;">
+                        <label class="form-label">
+                            <i class="fas fa-sliders-h" style="color: #667eea; margin-right: 8px;"></i>
+                            人员检测阈值
+                        </label>
+                        <input type="number" 
+                               class="form-control" 
+                               id="regionIntrusionThreshold" 
+                               min="0" 
+                               max="1" 
+                               step="0.05"
+                               value="0.3"
+                               placeholder="输入阈值（0-1.0）">
+                        <div class="compact-note">1 关闭全部，0 启用全部，其余值仅作用于 person。</div>
+                    </div>
+
+                    <!-- 人员检测阈值 -->
+                    <div class="form-group threshold-config" id="personDetectionConfig" style="display: none;">
+                        <label class="form-label">
+                            <i class="fas fa-sliders-h" style="color: #667eea; margin-right: 8px;"></i>
+                            人员检测阈值
+                        </label>
+                        <input type="number" 
+                               class="form-control" 
+                               id="personDetectionThreshold" 
+                               min="0" 
+                               max="1" 
+                               step="0.05"
+                               value="0.3"
+                               placeholder="输入阈值（0-1.0）">
+                    </div>
+
+                    <!-- 烟火检测阈值 -->
+                    <div class="threshold-config" id="fireDetectionConfig" style="display: none;">
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-fire" style="color: #ff5722; margin-right: 8px;"></i>
+                                火焰检测阈值
+                            </label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="fireFlameThreshold" 
+                                   min="0" 
+                                   max="1" 
+                                   step="0.05"
+                                   value="0.4"
+                                   placeholder="输入阈值（0-1.0）">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-smog" style="color: #9e9e9e; margin-right: 8px;"></i>
+                                烟雾检测阈值
+                            </label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="fireSmokeThreshold" 
+                                   min="0" 
+                                   max="1" 
+                                   step="0.05"
+                                   value="0.4"
+                                   placeholder="输入阈值（0-1.0）">
+                        </div>
+                    </div>
+
+                    <!-- 打架检测阈值 -->
+                    <div class="form-group threshold-config" id="fightDetectionConfig" style="display: none;">
+                        <label class="form-label">
+                            <i class="fas fa-fist-raised" style="color: #e53935; margin-right: 8px;"></i>
+                            打架检测阈值
+                        </label>
+                        <input type="number"
+                               class="form-control"
+                               id="fightThreshold"
+                               min="0"
+                               max="1"
+                               step="0.05"
+                               value="0.45"
+                               placeholder="输入阈值（0-1.0）">
+                    </div>
+
+                    <!-- 跌倒检测阈值 -->
+                    <div class="form-group threshold-config" id="fallDetectionConfig" style="display: none;">
+                        <label class="form-label">
+                            <i class="fas fa-user-injured" style="color: #ff7043; margin-right: 8px;"></i>
+                            跌倒模式
+                        </label>
+                        <div class="compact-note" style="margin-top: 10px;">
+                            默认选“标准”。如果模拟跌倒漏报，切到“灵敏”；如果坐着误报多，再切到“稳健”。
+                        </div>
+                        <select class="form-control" id="fallPreset" style="margin-top: 12px;">
+                            <option value="standard">标准（推荐）</option>
+                            <option value="sensitive">灵敏（更容易报跌倒）</option>
+                            <option value="robust">稳健（更少误报）</option>
+                        </select>
+                        <details id="fallAdvancedDetails" style="margin-top: 14px;">
+                            <summary style="cursor: pointer; color: #9fb3c8;">高级参数（通常不用改）</summary>
+                            <div style="margin-top: 14px;">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label" for="fallThreshold">跌倒检测阈值</label>
+                                        <input type="number"
+                                               class="form-input"
+                                               id="fallThreshold"
+                                               min="0"
+                                               max="1"
+                                               step="0.05"
+                                               value="0.60"
+                                               placeholder="0-1.0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="trackIouThresh">跟踪 IoU</label>
+                                        <input type="number"
+                                               class="form-input"
+                                               id="trackIouThresh"
+                                               min="0.10"
+                                               max="1.00"
+                                               step="0.05"
+                                               value="0.35"
+                                               placeholder="0.10-1.00">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="uprightRatioMax">直立宽高比上限</label>
+                                        <input type="number"
+                                               class="form-input"
+                                               id="uprightRatioMax"
+                                               min="0.50"
+                                               max="1.20"
+                                               step="0.05"
+                                               value="1.00"
+                                               placeholder="0.50-1.20">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label" for="fallRatioMin">跌倒宽高比下限</label>
+                                        <input type="number"
+                                               class="form-input"
+                                               id="fallRatioMin"
+                                               min="1.00"
+                                               max="2.50"
+                                               step="0.05"
+                                               value="1.00"
+                                               placeholder="1.00-2.50">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="heightDropRatio">高度下降比例</label>
+                                        <input type="number"
+                                               class="form-input"
+                                               id="heightDropRatio"
+                                               min="0.40"
+                                               max="1.00"
+                                               step="0.05"
+                                               value="0.90"
+                                               placeholder="0.40-1.00">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="staticFallRatioMin">静态躺倒宽高比</label>
+                                        <input type="number"
+                                               class="form-input"
+                                               id="staticFallRatioMin"
+                                               min="1.00"
+                                               max="2.50"
+                                               step="0.05"
+                                               value="1.20"
+                                               placeholder="1.00-2.50">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label" for="staticHeightRatioMax">静态躺倒高度占比</label>
+                                        <input type="number"
+                                               class="form-input"
+                                               id="staticHeightRatioMax"
+                                               min="0.10"
+                                               max="1.00"
+                                               step="0.05"
+                                               value="0.45"
+                                               placeholder="0.10-1.00">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="staticBottomRatio">静态躺倒底部占比</label>
+                                        <input type="number"
+                                               class="form-input"
+                                               id="staticBottomRatio"
+                                               min="0.10"
+                                               max="1.00"
+                                               step="0.05"
+                                               value="0.50"
+                                               placeholder="0.10-1.00">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="minBottomRatio">动态跌倒底部占比</label>
+                                        <input type="number"
+                                               class="form-input"
+                                               id="minBottomRatio"
+                                               min="0.10"
+                                               max="1.00"
+                                               step="0.05"
+                                               value="0.35"
+                                               placeholder="0.10-1.00">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label" for="minCenterDropRatio">中心下坠比例</label>
+                                        <input type="number"
+                                               class="form-input"
+                                               id="minCenterDropRatio"
+                                               min="0.00"
+                                               max="0.50"
+                                               step="0.01"
+                                               value="0.05"
+                                               placeholder="0.00-0.50">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="uprightFrames">直立连续帧数</label>
+                                        <input type="number"
+                                               class="form-input"
+                                               id="uprightFrames"
+                                               min="1"
+                                               max="10"
+                                               step="1"
+                                               value="1"
+                                               placeholder="1-10">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="fallFrames">动态跌倒连续帧数</label>
+                                        <input type="number"
+                                               class="form-input"
+                                               id="fallFrames"
+                                               min="1"
+                                               max="10"
+                                               step="1"
+                                               value="1"
+                                               placeholder="1-10">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label" for="staticFallFrames">静态躺倒连续帧数</label>
+                                        <input type="number"
+                                               class="form-input"
+                                               id="staticFallFrames"
+                                               min="1"
+                                               max="10"
+                                               step="1"
+                                               value="2"
+                                               placeholder="1-10">
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+
+                    <!-- 人脸识别参数 -->
+                    <div class="form-group threshold-config" id="faceRecognitionConfig" style="display: none;">
+                        <label class="form-label">
+                            <i class="fas fa-info-circle" style="color: #667eea; margin-right: 8px;"></i>
+                            人脸识别说明
+                        </label>
+                        <div class="compact-note">当前页面无需额外参数。</div>
+                    </div>
+
+                    <div class="form-group threshold-config" id="registeredPersonTrackingConfig" style="display: none;">
+                        <label class="form-label">
+                            <i class="fas fa-info-circle" style="color: #667eea; margin-right: 8px;"></i>
+                            登记人员追踪参数
+                        </label>
+                        <div class="compact-note">仅保留追踪检测阈值和人脸匹配阈值。</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="registeredTrackingDetectionThreshold">追踪检测阈值</label>
+                                <input type="number"
+                                       class="form-input"
+                                       id="registeredTrackingDetectionThreshold"
+                                       min="0.05"
+                                       max="0.95"
+                                       step="0.05"
+                                       value="0.20"
+                                       placeholder="0.05-0.95">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="registeredFaceSimilarityThreshold">人脸匹配阈值</label>
+                                <input type="number"
+                                       class="form-input"
+                                       id="registeredFaceSimilarityThreshold"
+                                       min="0.05"
+                                       max="0.95"
+                                       step="0.05"
+                                       value="0.45"
+                                       placeholder="0.05-0.95">
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="taskId">
+                    <input type="hidden" id="selectedAlgorithm">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveTask()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 任务数据
+        let tasks = [];
+        let editingTaskId = null;
+        let availableChannels = [];
+        let activeOptionsTaskId = null;
+        let activeOptionsAnchor = null;
+
+        // 页面加载时获取任务列表和通道列表
+        window.onload = function() {
+            // 先加载通道列表，完成后再加载任务列表
+            loadChannels().then(() => {
+                loadTasks();
+            });
+        };
+
+        // 加载通道列表
+        function loadChannels() {
+            return axios.get('/api/channels')
+                .then(response => {
+                    if (response.data.status === 'success') {
+                        availableChannels = response.data.channels || [];
+                        updateVideoSourceOptions();
+                        console.log('通道列表加载完成:', availableChannels);
+                    }
+                })
+                .catch(error => {
+                    console.error('加载通道列表失败:', error);
+                    availableChannels = [];
+                });
+        }
+
+        // 更新视频源选项
+        function updateVideoSourceOptions() {
+            const select = document.getElementById('taskVideoSource');
+            select.innerHTML = '<option value="">请选择视频源</option>';
+            
+            availableChannels.forEach(channel => {
+                const option = document.createElement('option');
+                option.value = channel.id;
+                option.textContent = `${channel.name} (通道${channel.channelAssignment})`;
+                select.appendChild(option);
+            });
+        }
+
+        // 加载任务列表
+        function loadTasks() {
+            axios.get('/api/tasks')
+                .then(response => {
+                    if (response.data.status === 'success') {
+                        activeOptionsTaskId = null;
+                        tasks = response.data.tasks || [];
+                        renderTasks();
+                    }
+                })
+                .catch(error => {
+                    console.error('加载任务失败:', error);
+                    activeOptionsTaskId = null;
+                    tasks = [];
+                    renderTasks();
+                });
+        }
+
+        function supportsTaskRegionConfig(task) {
+            return !!task && (
+                task.algorithm === 'registered_person_tracking' ||
+                task.algorithm === 'region_intrusion'
+            );
+        }
+
+        function positionTaskOptionsMenu(anchorElement) {
+            const menu = document.getElementById('taskOptionsMenu');
+            if (!menu || !anchorElement) {
+                return;
+            }
+
+            const rect = anchorElement.getBoundingClientRect();
+            const menuWidth = menu.offsetWidth || 152;
+            const menuHeight = menu.offsetHeight || 96;
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+
+            let left = rect.right - menuWidth;
+            let top = rect.bottom + 8;
+
+            if (left < 12) {
+                left = 12;
+            }
+            if (left + menuWidth > viewportWidth - 12) {
+                left = viewportWidth - menuWidth - 12;
+            }
+            if (top + menuHeight > viewportHeight - 12) {
+                top = rect.top - menuHeight - 8;
+            }
+            if (top < 12) {
+                top = 12;
+            }
+
+            menu.style.left = `${left}px`;
+            menu.style.top = `${top}px`;
+        }
+
+        function renderTaskOptionsMenu(taskId) {
+            const menu = document.getElementById('taskOptionsMenu');
+            const task = tasks.find(item => item.id === taskId);
+            const canConfigRegion = supportsTaskRegionConfig(task);
+
+            if (!menu || !task) {
+                return;
+            }
+
+            menu.innerHTML = `
+                <button class="options-menu-item delete-item" onclick="handleDeleteOption(event, ${task.id})">
+                    删除
+                </button>
+                <button
+                    class="options-menu-item ${canConfigRegion ? '' : 'disabled'}"
+                    onclick="openRegionEditor(event, ${task.id}, ${canConfigRegion ? 'true' : 'false'})"
+                    ${canConfigRegion ? '' : 'disabled'}
+                >
+                    配置区域
+                </button>
+            `;
+        }
+
+        function closeTaskOptionsMenu() {
+            const menu = document.getElementById('taskOptionsMenu');
+            activeOptionsTaskId = null;
+            activeOptionsAnchor = null;
+            if (menu) {
+                menu.classList.remove('show');
+                menu.style.left = '';
+                menu.style.top = '';
+            }
+        }
+
+        function toggleTaskOptionsMenu(event, taskId) {
+            if (event) {
+                event.stopPropagation();
+            }
+
+            const button = event && event.currentTarget ? event.currentTarget : null;
+            const menu = document.getElementById('taskOptionsMenu');
+            if (!menu || !button) {
+                return;
+            }
+
+            if (activeOptionsTaskId === taskId && menu.classList.contains('show')) {
+                closeTaskOptionsMenu();
+                return;
+            }
+
+            activeOptionsTaskId = taskId;
+            activeOptionsAnchor = button;
+            renderTaskOptionsMenu(taskId);
+            menu.classList.add('show');
+            positionTaskOptionsMenu(button);
+        }
+
+        function handleDeleteOption(event, id) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            closeTaskOptionsMenu();
+            deleteTask(id);
+        }
+
+        function openRegionEditor(event, id, enabled) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            if (!enabled) {
+                return;
+            }
+
+            closeTaskOptionsMenu();
+            window.location.href = `task_region_editor.html?taskId=${encodeURIComponent(id)}`;
+        }
+
+        // 渲染任务列表
+        function renderTasks() {
+            const tbody = document.getElementById('tasksTableBody');
+            const emptyState = document.getElementById('emptyState');
+
+            if (tasks.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'flex';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            tbody.innerHTML = tasks.map(task => {
+                const channel = availableChannels.find(c => c.id == task.videoSourceId);
+                let channelName = '未知';
+                
+                if (channel) {
+                    channelName = channel.name;
+                } else if (availableChannels.length === 0) {
+                    // 如果通道列表为空，说明还在加载中
+                    channelName = '加载中...';
+                    console.warn('通道列表为空，无法显示视频源名称');
+                } else {
+                    console.warn(`未找到ID为 ${task.videoSourceId} 的通道`);
+                }
+                
+                return `
+                <tr>
+                    <td><span class="task-name">${task.taskNumber}</span></td>
+                    <td>${task.description || '-'}</td>
+                    <td>${channelName}</td>
+                    <td>${getAlgorithmDisplayName(task)}</td>
+                    <td>
+                        <span class="status-badge status-${task.status}">
+                            <i class="fas fa-circle"></i>
+                            ${getStatusText(task.status)}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-btns">
+                            ${task.status === 'stopped' ? 
+                                `<button class="btn-action btn-start" onclick="startTask(${task.id})">启动</button>` : 
+                                `<button class="btn-action btn-stop" onclick="stopTask(${task.id})">停止</button>`
+                            }
+                            <button class="btn-action btn-edit" onclick="editTask(${task.id})">编辑</button>
+                            <div class="options-menu-wrap">
+                                <button class="btn-action btn-options" onclick="toggleTaskOptionsMenu(event, ${task.id})">
+                                    选项<span class="btn-caret">▼</span>
+                                </button>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        function supportsDemoModeAlgorithm(algorithm) {
+            return algorithm === '打架检测' || algorithm === '跌倒检测';
+        }
+
+        function isDemoModeEnabled(value) {
+            return value === true || value === 1 || value === '1' || value === 'true';
+        }
+
+        function getDemoModeStorageKey() {
+            return 'cefTaskDemoModeMap';
+        }
+
+        function getDemoModeMap() {
+            try {
+                const raw = localStorage.getItem(getDemoModeStorageKey());
+                const parsed = raw ? JSON.parse(raw) : {};
+                return parsed && typeof parsed === 'object' ? parsed : {};
+            } catch (error) {
+                console.warn('读取演示模式配置失败:', error);
+                return {};
+            }
+        }
+
+        function saveDemoModeMap(map) {
+            try {
+                localStorage.setItem(getDemoModeStorageKey(), JSON.stringify(map));
+            } catch (error) {
+                console.warn('保存演示模式配置失败:', error);
+            }
+        }
+
+        function setPersistedDemoMode(taskId, algorithm, enabled) {
+            if (!taskId) {
+                return;
+            }
+
+            const map = getDemoModeMap();
+            const key = String(taskId);
+
+            if (supportsDemoModeAlgorithm(algorithm) && enabled) {
+                map[key] = true;
+            } else {
+                delete map[key];
+            }
+
+            saveDemoModeMap(map);
+        }
+
+        function getPersistedDemoMode(task) {
+            if (!task || !supportsDemoModeAlgorithm(task.algorithm)) {
+                return false;
+            }
+
+            if (Object.prototype.hasOwnProperty.call(task, 'demoMode')) {
+                return isDemoModeEnabled(task.demoMode);
+            }
+
+            const map = getDemoModeMap();
+            return isDemoModeEnabled(map[String(task.id)]);
+        }
+
+        function removePersistedDemoMode(taskId) {
+            if (!taskId) {
+                return;
+            }
+
+            const map = getDemoModeMap();
+            delete map[String(taskId)];
+            saveDemoModeMap(map);
+        }
+
+        // 获取算法名称
+        function getAlgorithmName(algorithm) {
+            const algorithmMap = {
+                'region_intrusion': '区域入侵',
+                'person_detection': '人员检测',
+                '明烟明火': '明烟明火',
+                '打架检测': '打架检测',
+                '跌倒检测': '跌倒检测',
+                'face_recognition': '人脸识别',
+                'registered_person_tracking': '登记人员追踪'
+            };
+            return algorithmMap[algorithm] || algorithm;
+        }
+
+        function getAlgorithmDisplayName(task) {
+            const baseName = getAlgorithmName(task.algorithm);
+            if (getPersistedDemoMode(task)) {
+                return baseName + '（演示模式）';
+            }
+            return baseName;
+        }
+
+        // 获取状态文本
+        function getStatusText(status) {
+            const statusMap = {
+                'running': '运行中',
+                'stopped': '已停止'
+            };
+            return statusMap[status] || '未知';
+        }
+
+        const FALL_FIELD_CONFIGS = [
+            { key: 'fallThreshold', label: '跌倒检测阈值', min: 0, max: 1, hint: '0-1.0' },
+            { key: 'trackIouThresh', label: '跟踪 IoU', min: 0.10, max: 1.00, hint: '0.10-1.00' },
+            { key: 'uprightRatioMax', label: '直立宽高比上限', min: 0.50, max: 1.20, hint: '0.50-1.20' },
+            { key: 'fallRatioMin', label: '跌倒宽高比下限', min: 1.00, max: 2.50, hint: '1.00-2.50' },
+            { key: 'heightDropRatio', label: '高度下降比例', min: 0.40, max: 1.00, hint: '0.40-1.00' },
+            { key: 'staticFallRatioMin', label: '静态躺倒宽高比', min: 1.00, max: 2.50, hint: '1.00-2.50' },
+            { key: 'staticHeightRatioMax', label: '静态躺倒高度占比', min: 0.10, max: 1.00, hint: '0.10-1.00' },
+            { key: 'staticBottomRatio', label: '静态躺倒底部占比', min: 0.10, max: 1.00, hint: '0.10-1.00' },
+            { key: 'minBottomRatio', label: '动态跌倒底部占比', min: 0.10, max: 1.00, hint: '0.10-1.00' },
+            { key: 'minCenterDropRatio', label: '中心下坠比例', min: 0.00, max: 0.50, hint: '0.00-0.50' },
+            { key: 'uprightFrames', label: '直立连续帧数', min: 1, max: 10, hint: '1-10', integer: true },
+            { key: 'fallFrames', label: '动态跌倒连续帧数', min: 1, max: 10, hint: '1-10', integer: true },
+            { key: 'staticFallFrames', label: '静态躺倒连续帧数', min: 1, max: 10, hint: '1-10', integer: true }
+        ];
+
+        const FALL_PRESETS = {
+            standard: {
+                fallThreshold: 0.60,
+                trackIouThresh: 0.35,
+                uprightRatioMax: 1.00,
+                fallRatioMin: 1.00,
+                heightDropRatio: 0.90,
+                staticFallRatioMin: 1.20,
+                staticHeightRatioMax: 0.45,
+                staticBottomRatio: 0.50,
+                minBottomRatio: 0.35,
+                minCenterDropRatio: 0.05,
+                uprightFrames: 1,
+                fallFrames: 1,
+                staticFallFrames: 2
+            },
+            sensitive: {
+                fallThreshold: 0.55,
+                trackIouThresh: 0.35,
+                uprightRatioMax: 1.05,
+                fallRatioMin: 1.00,
+                heightDropRatio: 0.92,
+                staticFallRatioMin: 1.10,
+                staticHeightRatioMax: 0.50,
+                staticBottomRatio: 0.45,
+                minBottomRatio: 0.35,
+                minCenterDropRatio: 0.00,
+                uprightFrames: 1,
+                fallFrames: 1,
+                staticFallFrames: 1
+            },
+            robust: {
+                fallThreshold: 0.55,
+                trackIouThresh: 0.35,
+                uprightRatioMax: 0.85,
+                fallRatioMin: 1.15,
+                heightDropRatio: 0.80,
+                staticFallRatioMin: 1.35,
+                staticHeightRatioMax: 0.40,
+                staticBottomRatio: 0.60,
+                minBottomRatio: 0.50,
+                minCenterDropRatio: 0.12,
+                uprightFrames: 2,
+                fallFrames: 2,
+                staticFallFrames: 2
+            }
+        };
+
+        const FALL_DEFAULT_PRESET = 'standard';
+
+        function getFallPreset(task = {}) {
+            const preset = task.fallPreset;
+            return Object.prototype.hasOwnProperty.call(FALL_PRESETS, preset) ? preset : FALL_DEFAULT_PRESET;
+        }
+
+        function getFallPresetSettings(preset) {
+            return FALL_PRESETS[getFallPreset({ fallPreset: preset })];
+        }
+
+        function applyFallPreset(preset) {
+            applyFallSettings({ fallPreset: preset });
+        }
+
+        function applyFallSettings(task = {}) {
+            const preset = getFallPreset(task);
+            const settings = { ...getFallPresetSettings(preset), ...task };
+            const presetSelect = document.getElementById('fallPreset');
+            if (presetSelect) {
+                presetSelect.value = preset;
+            }
+            FALL_FIELD_CONFIGS.forEach(field => {
+                const input = document.getElementById(field.key);
+                if (!input) {
+                    return;
+                }
+                const value = Number(settings[field.key]);
+                const fallback = getFallPresetSettings(preset)[field.key];
+                input.value = Number.isFinite(value) ? value : fallback;
+            });
+        }
+
+        function collectFallSettings() {
+            const settings = {};
+            const presetSelect = document.getElementById('fallPreset');
+            settings.fallPreset = presetSelect ? presetSelect.value : FALL_DEFAULT_PRESET;
+
+            for (const field of FALL_FIELD_CONFIGS) {
+                const input = document.getElementById(field.key);
+                const parser = field.integer ? parseInt : parseFloat;
+                const value = parser(input.value, 10);
+
+                if (!Number.isFinite(value) || value < field.min || value > field.max) {
+                    alert(`请输入有效的${field.label}（${field.hint}）`);
+                    return null;
+                }
+
+                settings[field.key] = field.integer ? Math.round(value) : value;
+            }
+
+            return settings;
+        }
+
+        function showToast(message, type = "success") {
+            const container = document.getElementById("toastContainer");
+            if (!container) {
+                return;
+            }
+            const item = document.createElement("div");
+            item.className = "toast-item " + type;
+            item.textContent = message;
+            container.appendChild(item);
+            window.setTimeout(() => {
+                item.style.animation = "slide-in 0.2s ease reverse";
+                window.setTimeout(() => item.remove(), 200);
+            }, 2500);
+        }
+
+        // 打开新增模态框
+        function openAddModal() {
+            editingTaskId = null;
+            document.getElementById('modalTitle').textContent = '新增任务';
+            document.getElementById('taskForm').reset();
+            document.getElementById('taskId').value = '';
+            document.getElementById('selectedAlgorithm').value = '';
+
+            document.querySelectorAll('.algorithm-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+
+            document.querySelectorAll('.threshold-config').forEach(config => {
+                config.style.display = 'none';
+            });
+
+            document.getElementById('regionIntrusionThreshold').value = 0.3;
+            document.getElementById('personDetectionThreshold').value = 0.3;
+            document.getElementById('fireFlameThreshold').value = 0.4;
+            document.getElementById('fireSmokeThreshold').value = 0.4;
+            document.getElementById('fightThreshold').value = 0.45;
+            applyFallSettings();
+            document.getElementById('fallAdvancedDetails').open = false;
+            document.getElementById('registeredTrackingDetectionThreshold').value = 0.20;
+            document.getElementById('registeredFaceSimilarityThreshold').value = 0.45;
+            document.getElementById('taskRemoteUrl').value = '';
+            document.getElementById('taskDemoMode').checked = false;
+            document.getElementById('demoModeConfig').style.display = 'none';
+            
+            document.getElementById('taskModal').classList.add('show');
+        }
+
+        // 编辑任务
+        function editTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (!task) return;
+
+            editingTaskId = id;
+            document.getElementById('modalTitle').textContent = '编辑任务';
+            document.getElementById('taskNumber').value = task.taskNumber;
+            document.getElementById('taskDescription').value = task.description || '';
+            document.getElementById('taskVideoSource').value = task.videoSourceId;
+            document.getElementById('selectedAlgorithm').value = task.algorithm;
+            document.getElementById('taskRemoteUrl').value = task.remoteUrl || '';
+            document.getElementById('taskDemoMode').checked = getPersistedDemoMode(task);
+            document.getElementById('taskId').value = id;
+            
+            // 选中对应的算法
+            document.querySelectorAll('.algorithm-card').forEach(card => {
+                if (card.getAttribute('data-algorithm') === task.algorithm) {
+                    card.classList.add('selected');
+                } else {
+                    card.classList.remove('selected');
+                }
+            });
+
+            showThresholdConfig(task.algorithm);
+
+            switch(task.algorithm) {
+                case 'region_intrusion':
+                    document.getElementById('regionIntrusionThreshold').value =
+                        task.threshold !== undefined ? task.threshold : 0.3;
+                    break;
+                case 'person_detection':
+                    document.getElementById('personDetectionThreshold').value =
+                        task.threshold !== undefined ? task.threshold : 0.3;
+                    break;
+                case '明烟明火':
+                    document.getElementById('fireFlameThreshold').value =
+                        task.flameThreshold !== undefined ? task.flameThreshold : 0.4;
+                    document.getElementById('fireSmokeThreshold').value =
+                        task.smokeThreshold !== undefined ? task.smokeThreshold : 0.4;
+                    break;
+                case '打架检测':
+                    document.getElementById('fightThreshold').value =
+                        task.fightThreshold !== undefined ? task.fightThreshold : 0.45;
+                    break;
+                case '跌倒检测':
+                    applyFallSettings(task);
+                    document.getElementById('fallAdvancedDetails').open = false;
+                    break;
+                case 'face_recognition':
+                case 'registered_person_tracking':
+                    if (task.algorithm === 'registered_person_tracking') {
+                        document.getElementById('registeredTrackingDetectionThreshold').value =
+                            task.trackingDetectionThreshold !== undefined ? task.trackingDetectionThreshold : 0.20;
+                        document.getElementById('registeredFaceSimilarityThreshold').value =
+                            task.faceSimilarityThreshold !== undefined ? task.faceSimilarityThreshold : 0.45;
+                    }
+                    break;
+            }
+            
+            document.getElementById('taskModal').classList.add('show');
+        }
+
+        // 关闭模态框
+        function closeModal() {
+            document.getElementById('taskModal').classList.remove('show');
+        }
+
+        // 算法卡片点击事件
+        document.getElementById('algorithmGrid').addEventListener('click', (e) => {
+            const card = e.target.closest('.algorithm-card');
+            if (card) {
+                document.querySelectorAll('.algorithm-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                const algorithm = card.getAttribute('data-algorithm');
+                document.getElementById('selectedAlgorithm').value = algorithm;
+                showThresholdConfig(algorithm);
+            }
+        });
+
+        document.getElementById('fallPreset').addEventListener('change', (event) => {
+            applyFallPreset(event.target.value);
+        });
+
+        function showThresholdConfig(algorithm) {
+            document.querySelectorAll('.threshold-config').forEach(config => {
+                config.style.display = 'none';
+            });
+
+            document.getElementById('demoModeConfig').style.display =
+                supportsDemoModeAlgorithm(algorithm) ? 'block' : 'none';
+
+            let visibleConfig = null;
+
+            switch(algorithm) {
+                case 'region_intrusion':
+                    visibleConfig = document.getElementById('regionIntrusionConfig');
+                    break;
+                case 'person_detection':
+                    visibleConfig = document.getElementById('personDetectionConfig');
+                    break;
+                case '明烟明火':
+                    visibleConfig = document.getElementById('fireDetectionConfig');
+                    break;
+                case '打架检测':
+                    visibleConfig = document.getElementById('fightDetectionConfig');
+                    break;
+                case '跌倒检测':
+                    visibleConfig = document.getElementById('fallDetectionConfig');
+                    break;
+                case 'face_recognition':
+                    visibleConfig = document.getElementById('faceRecognitionConfig');
+                    break;
+                case 'registered_person_tracking':
+                    visibleConfig = document.getElementById('registeredPersonTrackingConfig');
+                    break;
+            }
+
+            if (visibleConfig) {
+                visibleConfig.style.display = 'block';
+                window.setTimeout(() => {
+                    visibleConfig.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest'
+                    });
+                }, 0);
+            }
+        }
+
+        // 保存任务
+        function saveTask() {
+            const taskNumber = document.getElementById('taskNumber').value.trim();
+            const description = document.getElementById('taskDescription').value.trim();
+            const videoSourceId = document.getElementById('taskVideoSource').value;
+            const algorithm = document.getElementById('selectedAlgorithm').value;
+            const remoteUrl = document.getElementById('taskRemoteUrl').value.trim();
+            const demoMode = supportsDemoModeAlgorithm(algorithm) && document.getElementById('taskDemoMode').checked;
+
+            if (!taskNumber) {
+                alert('请填写任务编号');
+                return;
+            }
+
+            if (!videoSourceId) {
+                alert('请选择视频源');
+                return;
+            }
+
+            if (!algorithm) {
+                alert('请选择算法');
+                return;
+            }
+
+            let taskData = {
+                taskNumber,
+                description,
+                videoSourceId: parseInt(videoSourceId),
+                algorithm,
+                remoteUrl,  // 添加远程上报地址
+                status: 'stopped'
+            };
+
+            if (supportsDemoModeAlgorithm(algorithm)) {
+                taskData.demoMode = demoMode;
+            }
+
+            if (algorithm === 'region_intrusion') {
+                const threshold = parseFloat(document.getElementById('regionIntrusionThreshold').value);
+
+                if (isNaN(threshold) || threshold < 0 || threshold > 1) {
+                    alert('请输入有效的阈值（0-1.0）');
+                    return;
+                }
+
+                if (threshold === 1.0) {
+                    if (confirm('阈值设为 1.0 将关闭所有检测类别，确定继续吗？')) {
+                        taskData.thresholdMode = 'disable_all';
+                        taskData.threshold = 1.0;
+                    } else {
+                        return;
+                    }
+                } else if (threshold <= 0.1) {
+                    if (confirm('阈值设为接近 0 将开启所有检测类别（设为0.3），确定继续吗？')) {
+                        taskData.thresholdMode = 'enable_all';
+                        taskData.threshold = 0.3;
+                    } else {
+                        return;
+                    }
+                } else {
+                    taskData.thresholdMode = 'person_only';
+                    taskData.threshold = threshold;
+                }
+            } else if (algorithm === 'person_detection') {
+                const threshold = parseFloat(document.getElementById('personDetectionThreshold').value);
+
+                if (isNaN(threshold) || threshold < 0 || threshold > 1) {
+                    alert('请输入有效的阈值（0-1.0）');
+                    return;
+                }
+
+                taskData.threshold = threshold;
+            } else if (algorithm === '明烟明火') {
+                const flameThreshold = parseFloat(document.getElementById('fireFlameThreshold').value);
+                const smokeThreshold = parseFloat(document.getElementById('fireSmokeThreshold').value);
+
+                if (isNaN(flameThreshold) || flameThreshold < 0 || flameThreshold > 1) {
+                    alert('请输入有效的火焰检测阈值（0-1.0）');
+                    return;
+                }
+
+                if (isNaN(smokeThreshold) || smokeThreshold < 0 || smokeThreshold > 1) {
+                    alert('请输入有效的烟雾检测阈值（0-1.0）');
+                    return;
+                }
+
+                taskData.flameThreshold = flameThreshold;
+                taskData.smokeThreshold = smokeThreshold;
+            } else if (algorithm === '打架检测') {
+                const fightThreshold = parseFloat(document.getElementById('fightThreshold').value);
+
+                if (isNaN(fightThreshold) || fightThreshold < 0 || fightThreshold > 1) {
+                    alert('请输入有效的打架检测阈值（0-1.0）');
+                    return;
+                }
+
+                taskData.fightThreshold = fightThreshold;
+            } else if (algorithm === '跌倒检测') {
+                const fallSettings = collectFallSettings();
+                if (!fallSettings) {
+                    return;
+                }
+                Object.assign(taskData, fallSettings);
+            } else if (algorithm === 'registered_person_tracking') {
+                const trackingDetectionThreshold = parseFloat(
+                    document.getElementById('registeredTrackingDetectionThreshold').value
+                );
+                const faceSimilarityThreshold = parseFloat(
+                    document.getElementById('registeredFaceSimilarityThreshold').value
+                );
+
+                if (isNaN(trackingDetectionThreshold) ||
+                    trackingDetectionThreshold < 0.05 ||
+                    trackingDetectionThreshold > 0.95) {
+                    alert('请输入有效的追踪检测阈值（0.05-0.95）');
+                    return;
+                }
+
+                if (isNaN(faceSimilarityThreshold) ||
+                    faceSimilarityThreshold < 0.05 ||
+                    faceSimilarityThreshold > 0.95) {
+                    alert('请输入有效的人脸匹配阈值（0.05-0.95）');
+                    return;
+                }
+
+                taskData.trackingDetectionThreshold = trackingDetectionThreshold;
+                taskData.faceSimilarityThreshold = faceSimilarityThreshold;
+            }
+
+            if (editingTaskId) {
+                // 编辑模式
+                axios.put(`/api/tasks/${editingTaskId}`, taskData)
+                    .then(response => {
+                        if (response.data.status === 'success') {
+                            setPersistedDemoMode(editingTaskId, algorithm, demoMode);
+                            alert('任务更新成功');
+                            closeModal();
+                            loadTasks();
+                        } else {
+                            alert('任务更新失败: ' + response.data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('更新任务失败:', error);
+                        alert('任务更新失败，请检查网络连接');
+                    });
+            } else {
+                // 新增模式
+                axios.post('/api/tasks', taskData)
+                    .then(response => {
+                        if (response.data.status === 'success') {
+                            const createdTaskId = response.data.task && response.data.task.id;
+                            setPersistedDemoMode(createdTaskId, algorithm, demoMode);
+                            alert('任务添加成功');
+                            closeModal();
+                            loadTasks();
+                        } else {
+                            alert('任务添加失败: ' + response.data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('添加任务失败:', error);
+                        alert('任务添加失败，请检查网络连接');
+                    });
+            }
+        }
+
+        // 启动任务
+        function startTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (!task) {
+                showToast('任务不存在', 'error');
+                return;
+            }
+
+            showToast('正在启动任务...', 'info');
+
+            // 先获取全局参数，确定上报地址，设置阈值，然后启动任务
+            getGlobalParams().then(globalParams => {
+                const finalRemoteUrl = determineRemoteUrl(globalParams.RemoteInfo, task.remoteUrl);
+                console.log('上报地址决策:', {
+                    globalUrl: globalParams.RemoteInfo,
+                    taskUrl: task.remoteUrl,
+                    finalUrl: finalRemoteUrl
+                });
+                
+                // 设置阈值
+                return setTaskThreshold(task).then(() => {
+                    // 启动任务，携带最终的上报地址
+                    return axios.post(`/api/tasks/${id}/start`, { 
+                        remoteUrl: finalRemoteUrl 
+                    });
+                });
+            }).then(response => {
+                if (response.data.status === 'success') {
+                    showToast('任务启动成功', 'success');
+                    // 重新加载通道列表和任务列表
+                    loadChannels().then(() => {
+                        loadTasks();
+                    });
+                } else {
+                    showToast('任务启动失败: ' + response.data.message, 'error');
+                }
+            }).catch(error => {
+                console.error('启动任务失败:', error);
+                showToast('任务启动失败: ' + (error.message || '请检查网络连接'), 'error');
+            });
+        }
+
+        // 获取全局参数配置
+        function getGlobalParams() {
+            return axios.get('/api/params')
+                .then(response => {
+                    if (response.data.status === 'success') {
+                        return response.data.params || {};
+                    }
+                    return {};
+                })
+                .catch(error => {
+                    console.warn('获取全局参数失败，使用默认值:', error);
+                    return {};
+                });
+        }
+
+        // 决定使用哪个上报地址
+        function determineRemoteUrl(globalUrl, taskUrl) {
+            // 优先使用全局地址，如果全局地址为空，则使用任务地址
+            if (globalUrl && globalUrl.trim() !== '') {
+                return globalUrl.trim();
+            }
+            return taskUrl && taskUrl.trim() !== '' ? taskUrl.trim() : '';
+        }
+
+        // 根据任务配置设置阈值
+        function setTaskThreshold(task) {
+            return new Promise((resolve, reject) => {
+                if (!task || (task.algorithm !== 'region_intrusion' && task.algorithm !== 'person_detection')) {
+                    resolve();
+                    return;
+                }
+
+                const allClasses = [
+                    'aeroplane', 'apple', 'backpack', 'banana', 'baseball bat', 'baseball glove',
+                    'bear', 'bed', 'bench', 'bicycle', 'bird', 'boat', 'book', 'bottle', 'bowl',
+                    'broccoli', 'bus', 'cake', 'car', 'carrot', 'cat', 'cell phone', 'chair',
+                    'clock', 'cow', 'cup', 'diningtable', 'dog', 'donut', 'elephant',
+                    'fire hydrant', 'fork', 'frisbee', 'giraffe', 'hair drier', 'handbag',
+                    'horse', 'hot dog', 'keyboard', 'kite', 'knife', 'laptop', 'microwave',
+                    'motorbike', 'mouse', 'orange', 'oven', 'parking meter', 'person', 'pizza',
+                    'pottedplant', 'refrigerator', 'remote', 'sandwich', 'scissors', 'sheep',
+                    'sink', 'skateboard', 'skis', 'snowboard', 'sofa', 'spoon', 'sports ball',
+                    'stop sign', 'suitcase', 'surfboard', 'teddy bear', 'tennis racket', 'tie',
+                    'toaster', 'toilet', 'toothbrush', 'traffic light', 'train', 'truck',
+                    'tvmonitor', 'umbrella', 'vase', 'wine glass', 'zebra'
+                ];
+
+                const payload = {};
+                const threshold = Number.isFinite(Number(task.threshold)) ? Number(task.threshold) : 0.3;
+                const thresholdMode = task.thresholdMode || 'person_only';
+
+                if (thresholdMode === 'enable_all') {
+                    allClasses.forEach(name => {
+                        payload[name] = threshold;
+                    });
+                } else if (thresholdMode === 'disable_all') {
+                    allClasses.forEach(name => {
+                        payload[name] = 1.0;
+                    });
+                } else {
+                    allClasses.forEach(name => {
+                        payload[name] = name === 'person' ? threshold : 1.0;
+                    });
+                }
+
+                axios.post('/get_json_file', payload, {
+                    headers: { 'Content-Type': 'application/json' }
+                }).then(() => {
+                    resolve();
+                }).catch(error => {
+                    reject(error);
+                });
+            });
+        }
+
+        // 停止任务
+        function stopTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (!task) {
+                showToast('任务不存在', 'error');
+                return;
+            }
+
+            showToast('正在停止任务...', 'info');
+
+            axios.post(`/api/tasks/${id}/stop`)
+                .then(response => {
+                    if (response.data.status === 'success') {
+                        showToast('任务停止成功', 'success');
+                        // 重新加载通道列表和任务列表
+                        loadChannels().then(() => {
+                            loadTasks();
+                        });
+                    } else {
+                        showToast('任务停止失败: ' + response.data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('停止任务失败:', error);
+                    showToast('任务停止失败: ' + (error.message || '请检查网络连接'), 'error');
+                });
+        }
+
+        // 删除任务
+        function deleteTask(id) {
+            if (!confirm('确定要删除这个任务吗？')) {
+                return;
+            }
+
+            axios.delete(`/api/tasks/${id}`)
+                .then(response => {
+                    if (response.data.status === 'success') {
+                        removePersistedDemoMode(id);
+                        alert('任务删除成功');
+                        loadTasks();
+                    } else {
+                        alert('任务删除失败: ' + response.data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('删除任务失败:', error);
+                    alert('任务删除失败，请检查网络连接');
+                });
+        }
+
+        // 点击模态框外部关闭
+        document.getElementById('taskModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        document.addEventListener('click', function() {
+            closeTaskOptionsMenu();
+        });
+
+        window.addEventListener('resize', function() {
+            closeTaskOptionsMenu();
+        });
+
+        document.addEventListener('scroll', function() {
+            closeTaskOptionsMenu();
+        }, true);
+    </script>
+</body>
+
+</html>

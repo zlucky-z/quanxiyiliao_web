@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件管理</title>
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="css/bootstrap-icons.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            min-height: 100vh;
+            padding: 6px;
+            background:
+                radial-gradient(circle at top, rgba(0, 162, 255, 0.18) 0%, rgba(0, 162, 255, 0) 34%),
+                linear-gradient(180deg, #07111f 0%, #0a1628 56%, #09111d 100%);
+            color: #fff;
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+            overflow: hidden;
+        }
+
+        .page-shell {
+            height: calc(100vh - 12px);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .page-header {
+            background: linear-gradient(90deg, rgba(0, 30, 60, 0.62), rgba(0, 50, 100, 0.45));
+            border: 1px solid rgba(0, 162, 255, 0.35);
+            border-radius: 8px;
+            padding: 9px 14px;
+            box-shadow: 0 0 18px rgba(0, 162, 255, 0.22);
+        }
+
+        .page-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #00d4ff;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .content-wrapper {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-panel {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(135deg, rgba(10, 20, 40, 0.88), rgba(20, 35, 60, 0.68));
+            border: 1px solid rgba(0, 162, 255, 0.32);
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.52);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-panel::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00a2ff, transparent);
+        }
+
+        .toolbar-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(0, 162, 255, 0.22);
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 162, 255, 0.4) rgba(0, 0, 0, 0.25);
+        }
+
+        .toolbar-row::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .toolbar-row::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .toolbar-row::-webkit-scrollbar-thumb {
+            background: rgba(0, 162, 255, 0.45);
+            border-radius: 999px;
+        }
+
+        .title-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(0, 162, 255, 0.35);
+            background: rgba(8, 18, 38, 0.8);
+            font-size: 0.96rem;
+            font-weight: 700;
+            color: #00d4ff;
+            white-space: nowrap;
+        }
+
+        .stats-row {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            white-space: nowrap;
+            font-size: 0.88rem;
+        }
+
+        .stat-item {
+            color: rgba(255, 255, 255, 0.68);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .stat-value {
+            color: #00d4ff;
+            font-weight: 700;
+            font-size: 1.02rem;
+        }
+
+        .filter-toolbar {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+            white-space: nowrap;
+        }
+
+        .btn-group-sm .btn {
+            height: 30px;
+            padding: 0 12px;
+            font-size: 0.8rem;
+            border-radius: 5px;
+        }
+
+        .btn {
+            border: 1px solid rgba(0, 162, 255, 0.25);
+            background: rgba(10, 20, 40, 0.8);
+            color: rgba(255, 255, 255, 0.78);
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: rgba(20, 35, 60, 0.85);
+            border-color: rgba(0, 162, 255, 0.48);
+            color: #fff;
+        }
+
+        .btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .btn-outline-primary {
+            color: rgba(0, 212, 255, 0.9);
+            border-color: rgba(0, 162, 255, 0.45);
+            background: rgba(10, 20, 40, 0.65);
+        }
+
+        .btn-check:checked + .btn-outline-primary {
+            color: rgba(0, 212, 255, 1);
+            border-color: rgba(0, 162, 255, 0.7);
+            background: rgba(0, 162, 255, 0.2);
+            box-shadow: inset 0 0 0 1px rgba(0, 162, 255, 0.2);
+        }
+
+        .btn-success {
+            color: rgba(0, 255, 106, 0.95);
+            border-color: rgba(0, 200, 81, 0.45);
+        }
+
+        .btn-danger {
+            color: rgba(255, 102, 102, 0.95);
+            border-color: rgba(255, 68, 68, 0.45);
+        }
+
+        .btn-secondary {
+            color: rgba(185, 198, 220, 0.95);
+            border-color: rgba(130, 150, 190, 0.45);
+        }
+
+        .form-control {
+            height: 30px;
+            min-width: 128px;
+            width: 128px;
+            padding: 2px 8px;
+            border-radius: 5px;
+            background: rgba(5, 10, 25, 0.82);
+            border: 1px solid rgba(0, 162, 255, 0.35);
+            color: #fff;
+            font-size: 0.8rem;
+        }
+
+        .form-control:focus {
+            border-color: #00a2ff;
+            box-shadow: 0 0 8px rgba(0, 162, 255, 0.3);
+            background: rgba(8, 14, 30, 0.92);
+        }
+
+        .form-control::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+
+        .table-wrap {
+            flex: 1;
+            min-height: 0;
+            overflow: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 162, 255, 0.5) rgba(0, 0, 0, 0.2);
+        }
+
+        .table-wrap::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .table-wrap::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .table-wrap::-webkit-scrollbar-thumb {
+            background: rgba(0, 162, 255, 0.5);
+            border-radius: 3px;
+        }
+
+        .table {
+            width: 100%;
+            color: rgba(255, 255, 255, 0.92);
+            font-size: 0.84rem;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .table thead {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: rgba(10, 20, 40, 0.96);
+        }
+
+        .table thead th {
+            padding: 8px 10px;
+            font-weight: 600;
+            color: #00d4ff;
+            border-bottom: 2px solid rgba(0, 162, 255, 0.33);
+            white-space: nowrap;
+            background: rgba(10, 20, 40, 0.96);
+        }
+
+        .table tbody td {
+            padding: 7px 10px;
+            border-bottom: 1px solid rgba(0, 162, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+            background: transparent;
+            vertical-align: middle;
+        }
+
+        .table tbody tr:hover td {
+            background: rgba(0, 162, 255, 0.1);
+        }
+
+        .col-file {
+            max-width: 340px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        input[type="checkbox"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: rgba(10, 20, 40, 0.8);
+            border: 2px solid rgba(0, 162, 255, 0.5);
+            border-radius: 3px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        input[type="checkbox"]:checked {
+            background: linear-gradient(135deg, #00a2ff, #0066cc);
+            border-color: #00a2ff;
+        }
+
+        input[type="checkbox"]:checked::after {
+            content: "";
+            position: absolute;
+            left: 4px;
+            top: 1px;
+            width: 4px;
+            height: 8px;
+            border: solid #fff;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        input[type="checkbox"]:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .badge-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            border: 1px solid rgba(0, 162, 255, 0.32);
+            background: rgba(10, 20, 40, 0.68);
+            color: rgba(255, 255, 255, 0.82);
+        }
+
+        .badge-video {
+            border-color: rgba(0, 162, 255, 0.45);
+            color: rgba(0, 212, 255, 0.95);
+        }
+
+        .badge-image {
+            border-color: rgba(0, 200, 81, 0.45);
+            color: rgba(0, 255, 106, 0.95);
+        }
+
+        .badge-danger {
+            border-color: rgba(255, 68, 68, 0.45);
+            color: rgba(255, 102, 102, 0.95);
+        }
+
+        .actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .icon-btn {
+            width: 30px;
+            height: 28px;
+            border-radius: 6px;
+            border: 1px solid rgba(0, 162, 255, 0.3);
+            background: rgba(10, 20, 40, 0.8);
+            color: rgba(255, 255, 255, 0.86);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .icon-btn:hover:not(:disabled) {
+            background: rgba(20, 35, 60, 0.85);
+            border-color: rgba(0, 162, 255, 0.52);
+        }
+
+        .icon-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .icon-btn.delete {
+            border-color: rgba(255, 68, 68, 0.45);
+            color: rgba(255, 102, 102, 0.95);
+        }
+
+        .icon-btn.download {
+            border-color: rgba(0, 200, 81, 0.45);
+            color: rgba(0, 255, 106, 0.95);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 24px 0;
+            color: rgba(255, 255, 255, 0.38);
+        }
+
+        .bottom-bar {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(0, 162, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .bottom-note {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.56);
+        }
+
+        .bottom-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-left: auto;
+        }
+
+        .toast-wrap {
+            position: fixed;
+            top: 14px;
+            right: 14px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast-item {
+            min-width: 240px;
+            max-width: 360px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            background: rgba(10, 20, 40, 0.96);
+            border: 1px solid rgba(0, 162, 255, 0.45);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+            font-size: 0.84rem;
+            line-height: 1.45;
+        }
+
+        .toast-item.error {
+            border-color: rgba(255, 68, 68, 0.5);
+        }
+
+        .toast-item.warning {
+            border-color: rgba(255, 187, 51, 0.5);
+        }
+
+        @media (max-width: 1024px) {
+            body {
+                overflow: auto;
+            }
+
+            .page-shell {
+                height: auto;
+                min-height: calc(100vh - 12px);
+            }
+
+            .card-panel {
+                min-height: 520px;
+            }
+        }
+
+        /* Final black sync: file manager panels, filters, table head and toasts. */
+        html body {
+            background:
+                radial-gradient(circle at top, rgba(118, 128, 146, 0.12) 0%, rgba(118, 128, 146, 0) 32%),
+                linear-gradient(180deg, #050608 0%, #090b0f 56%, #07090c 100%) !important;
+        }
+
+        html body .page-shell > .page-header {
+            background: linear-gradient(180deg, rgba(9, 11, 15, 0.99), rgba(14, 18, 24, 0.96)) !important;
+            border: 1px solid rgba(122, 136, 158, 0.18) !important;
+            box-shadow: 0 16px 30px rgba(0, 0, 0, 0.38) !important;
+        }
+
+        html body .page-shell .card-panel {
+            background: linear-gradient(180deg, rgba(9, 11, 15, 0.98), rgba(13, 17, 23, 0.95)) !important;
+            border: 1px solid rgba(122, 136, 158, 0.14) !important;
+            box-shadow: 0 20px 38px rgba(0, 0, 0, 0.44) !important;
+        }
+
+        html body .page-shell .card-panel::before {
+            background: linear-gradient(90deg, transparent, rgba(156, 170, 192, 0.28), transparent) !important;
+        }
+
+        html body .page-shell .toolbar-row,
+        html body .page-shell .bottom-bar {
+            border-color: rgba(122, 136, 158, 0.12) !important;
+        }
+
+        html body .page-shell .title-chip {
+            background: linear-gradient(180deg, rgba(17, 21, 27, 0.96), rgba(10, 13, 18, 0.97)) !important;
+            border-color: rgba(122, 136, 158, 0.22) !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+        }
+
+        html body .page-shell .btn,
+        html body .page-shell .btn-outline-primary,
+        html body .page-shell .icon-btn {
+            background: linear-gradient(180deg, rgba(19, 23, 29, 0.97), rgba(10, 13, 18, 0.99)) !important;
+            border-color: rgba(122, 136, 158, 0.18) !important;
+            box-shadow: none !important;
+        }
+
+        html body .page-shell .btn:hover:not(:disabled),
+        html body .page-shell .btn-outline-primary:hover,
+        html body .page-shell .icon-btn:hover:not(:disabled) {
+            background: linear-gradient(180deg, rgba(25, 30, 37, 0.98), rgba(14, 17, 22, 0.99)) !important;
+            border-color: rgba(150, 166, 189, 0.24) !important;
+        }
+
+        html body .page-shell .btn-check:checked + .btn-outline-primary {
+            background: linear-gradient(180deg, rgba(25, 30, 37, 0.98), rgba(14, 17, 22, 0.99)) !important;
+            border-color: rgba(160, 178, 202, 0.26) !important;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04) !important;
+        }
+
+        html body .page-shell .btn-success,
+        html body .page-shell .icon-btn.download {
+            border-color: rgba(97, 162, 129, 0.22) !important;
+        }
+
+        html body .page-shell .btn-danger,
+        html body .page-shell .icon-btn.delete {
+            border-color: rgba(182, 101, 101, 0.22) !important;
+        }
+
+        html body .page-shell .form-control {
+            background: rgba(10, 13, 18, 0.92) !important;
+            border-color: rgba(122, 136, 158, 0.18) !important;
+        }
+
+        html body .page-shell .form-control:focus {
+            border-color: rgba(160, 178, 202, 0.24) !important;
+            box-shadow: 0 0 0 3px rgba(94, 106, 126, 0.12) !important;
+            background: rgba(12, 15, 20, 0.96) !important;
+        }
+
+        html body .page-shell .table thead,
+        html body .page-shell .table thead th {
+            background: linear-gradient(180deg, rgba(11, 13, 18, 0.99), rgba(18, 22, 28, 0.97)) !important;
+        }
+
+        html body .page-shell .table thead th {
+            border-bottom: 1px solid rgba(122, 136, 158, 0.2) !important;
+        }
+
+        html body .page-shell .table tbody td {
+            border-bottom-color: rgba(122, 136, 158, 0.08) !important;
+        }
+
+        html body .page-shell .table tbody tr:hover td {
+            background: rgba(255, 255, 255, 0.035) !important;
+        }
+
+        html body .page-shell input[type="checkbox"] {
+            background: rgba(10, 13, 18, 0.92) !important;
+            border-color: rgba(122, 136, 158, 0.28) !important;
+        }
+
+        html body .page-shell input[type="checkbox"]:checked {
+            background: linear-gradient(180deg, rgba(74, 82, 96, 0.96), rgba(30, 34, 42, 0.98)) !important;
+            border-color: rgba(160, 178, 202, 0.3) !important;
+        }
+
+        html body .page-shell .badge-chip {
+            background: rgba(17, 21, 27, 0.9) !important;
+            border-color: rgba(122, 136, 158, 0.16) !important;
+        }
+
+        html body .toast-item {
+            background: linear-gradient(180deg, rgba(12, 15, 21, 0.98), rgba(10, 12, 17, 0.97)) !important;
+            border-color: rgba(122, 136, 158, 0.2) !important;
+            box-shadow: 0 16px 30px rgba(0, 0, 0, 0.42) !important;
+        }
+    </style>
+    <link rel="stylesheet" href="pcb-theme.css?v=20260323-black3">
+</head>
+<body>
+    <div class="toast-wrap" id="toastWrap"></div>
+
+    <div class="page-shell">
+        <div class="page-header">
+            <div class="page-title"><i class="bi bi-bar-chart-line"></i> 文件管理</div>
+        </div>
+
+        <div class="content-wrapper">
+            <section class="card-panel">
+                <div class="toolbar-row">
+                    <div class="title-chip">
+                        <i class="bi bi-file-earmark-play"></i>
+                        录制文件
+                        <small style="font-size:0.75rem;color:rgba(255,255,255,0.55);font-weight:500;">(视频 & 图片)</small>
+                    </div>
+
+                    <div class="stats-row">
+                        <span class="stat-item">文件总数: <span class="stat-value" id="fileCount">0</span></span>
+                        <span class="stat-item"><i class="bi bi-camera-video"></i>视频: <span class="stat-value" id="videoCount">0</span></span>
+                        <span class="stat-item"><i class="bi bi-image"></i>图片: <span class="stat-value" id="imageCount">0</span></span>
+                        <span class="stat-item">总大小: <span class="stat-value" id="totalSize">0 B</span></span>
+                    </div>
+
+                    <div class="filter-toolbar">
+                        <div class="btn-group btn-group-sm" role="group" aria-label="类型筛选">
+                            <input type="radio" class="btn-check" name="typeFilter" id="typeAll" value="all" checked>
+                            <label class="btn btn-outline-primary" for="typeAll">全部类型</label>
+
+                            <input type="radio" class="btn-check" name="typeFilter" id="typeVideo" value="video">
+                            <label class="btn btn-outline-primary" for="typeVideo"><i class="bi bi-camera-video"></i>视频</label>
+
+                            <input type="radio" class="btn-check" name="typeFilter" id="typeImage" value="image">
+                            <label class="btn btn-outline-primary" for="typeImage"><i class="bi bi-image"></i>图片</label>
+                        </div>
+
+                        <div class="btn-group btn-group-sm" role="group" aria-label="通道筛选">
+                            <input type="radio" class="btn-check" name="channelFilter" id="channelAll" value="all" checked>
+                            <label class="btn btn-outline-primary" for="channelAll">全部通道</label>
+
+                            <input type="radio" class="btn-check" name="channelFilter" id="channel1" value="videos1">
+                            <label class="btn btn-outline-primary" for="channel1">通道1</label>
+
+                            <input type="radio" class="btn-check" name="channelFilter" id="channel2" value="videos2">
+                            <label class="btn btn-outline-primary" for="channel2">通道2</label>
+                        </div>
+
+                        <input type="date" class="form-control" id="startDate" title="开始日期">
+                        <input type="date" class="form-control" id="endDate" title="结束日期">
+                        <button class="btn btn-secondary btn-sm" id="clearDateBtn" type="button"><i class="bi bi-x-lg"></i></button>
+                        <button class="btn btn-success btn-sm" id="refreshBtn" type="button"><i class="bi bi-arrow-clockwise"></i>刷新</button>
+                    </div>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;"><input type="checkbox" id="selectAll" title="全选"></th>
+                                <th>文件名</th>
+                                <th>类型</th>
+                                <th>通道</th>
+                                <th>大小</th>
+                                <th>录制时间</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fileList">
+                            <tr><td colspan="8" class="empty-state">正在加载文件列表...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="bottom-bar">
+                    <div class="bottom-actions">
+                        <span>已选 <strong id="selectedCount">0</strong> 项</span>
+                        <button class="btn btn-danger btn-sm" id="batchDeleteBtn" type="button" disabled>
+                            <i class="bi bi-trash"></i>批量删除
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const state = {
+            allFiles: [],
+            filteredFiles: [],
+            selected: new Set(),
+            filters: {
+                type: "all",
+                channel: "all",
+                startDate: "",
+                endDate: ""
+            },
+            refreshTimer: null
+        };
+
+        const videoExtensions = [".mp4", ".avi", ".mkv", ".mov", ".m4v", ".flv", ".wmv", ".webm", ".3gp"];
+        const imageExtensions = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg", ".ico", ".tif", ".tiff"];
+
+        function encodeRelativePath(relativePath) {
+            return String(relativePath || "")
+                .split("/")
+                .map(segment => encodeURIComponent(segment))
+                .join("/");
+        }
+
+        function showToast(message, type = "success") {
+            const wrap = document.getElementById("toastWrap");
+            const item = document.createElement("div");
+            item.className = "toast-item" + (type === "error" ? " error" : type === "warning" ? " warning" : "");
+            item.textContent = message;
+            wrap.appendChild(item);
+            setTimeout(() => {
+                item.style.opacity = "0";
+                item.style.transition = "opacity 0.2s ease";
+                setTimeout(() => item.remove(), 220);
+            }, 2500);
+        }
+
+        async function fetchJson(url, options = {}) {
+            const response = await fetch(url, {
+                ...options,
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(options.headers || {})
+                }
+            });
+            const text = await response.text();
+            let data = {};
+            if (text) {
+                try {
+                    data = JSON.parse(text);
+                } catch (error) {
+                    data = { message: text };
+                }
+            }
+            if (!response.ok) {
+                throw new Error(data.message || text || ("HTTP " + response.status));
+            }
+            return data;
+        }
+
+        function getFileType(filename) {
+            const ext = String(filename || "").toLowerCase().slice(String(filename || "").lastIndexOf("."));
+            if (videoExtensions.includes(ext)) return "video";
+            if (imageExtensions.includes(ext)) return "image";
+            return "unknown";
+        }
+
+        function formatBytes(bytes) {
+            const num = Number(bytes || 0);
+            if (!Number.isFinite(num) || num <= 0) return "0 B";
+            const units = ["B", "KB", "MB", "GB", "TB"];
+            let size = num;
+            let unit = 0;
+            while (size >= 1024 && unit < units.length - 1) {
+                size /= 1024;
+                unit += 1;
+            }
+            if (unit === 0) return Math.round(size) + " " + units[unit];
+            return size.toFixed(size >= 10 ? 0 : 1) + " " + units[unit];
+        }
+
+        function updateStats() {
+            const files = state.allFiles;
+            const videoCount = files.filter(f => f.fileType === "video").length;
+            const imageCount = files.filter(f => f.fileType === "image").length;
+            const totalSize = files.reduce((sum, f) => sum + Number(f.size || 0), 0);
+
+            document.getElementById("fileCount").textContent = String(files.length);
+            document.getElementById("videoCount").textContent = String(videoCount);
+            document.getElementById("imageCount").textContent = String(imageCount);
+            document.getElementById("totalSize").textContent = formatBytes(totalSize);
+        }
+
+        function updateSelectionBar() {
+            const selectedCount = state.selected.size;
+            document.getElementById("selectedCount").textContent = String(selectedCount);
+            document.getElementById("batchDeleteBtn").disabled = selectedCount === 0;
+
+            const selectable = state.filteredFiles.filter(file => !file.isRecording).map(file => String(file.relativePath || ""));
+            const selectedVisible = selectable.filter(path => state.selected.has(path)).length;
+            const selectAll = document.getElementById("selectAll");
+            selectAll.checked = selectable.length > 0 && selectedVisible === selectable.length;
+            selectAll.indeterminate = selectedVisible > 0 && selectedVisible < selectable.length;
+        }
+
+        function syncSelectionWithFiltered() {
+            const filtered = new Set(state.filteredFiles.map(f => String(f.relativePath || "")));
+            for (const item of Array.from(state.selected)) {
+                if (!filtered.has(item)) {
+                    state.selected.delete(item);
+                }
+            }
+        }
+
+        function applyFilters() {
+            const { type, channel, startDate, endDate } = state.filters;
+
+            state.filteredFiles = state.allFiles.filter(file => {
+                if (type !== "all" && file.fileType !== type) return false;
+                if (channel !== "all" && String(file.channel || "") !== channel) return false;
+
+                const fileDate = String(file.timeStr || "").slice(0, 10);
+                if (startDate && fileDate && fileDate < startDate) return false;
+                if (endDate && fileDate && fileDate > endDate) return false;
+                return true;
+            });
+
+            syncSelectionWithFiltered();
+            renderTable();
+            updateSelectionBar();
+        }
+
+        function buildTypeBadge(type) {
+            if (type === "video") {
+                return '<span class="badge-chip badge-video"><i class="bi bi-camera-video"></i>视频</span>';
+            }
+            if (type === "image") {
+                return '<span class="badge-chip badge-image"><i class="bi bi-image"></i>图片</span>';
+            }
+            return '<span class="badge-chip"><i class="bi bi-file-earmark"></i>未知</span>';
+        }
+
+        function buildStatusBadge(isRecording) {
+            if (isRecording) {
+                return '<span class="badge-chip badge-danger">录制中</span>';
+            }
+            return '<span class="badge-chip">已完成</span>';
+        }
+
+        function escapeAttr(text) {
+            return String(text || "")
+                .replace(/&/g, "&amp;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById("fileList");
+            if (!state.filteredFiles.length) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">暂无符合条件的文件</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = state.filteredFiles.map(file => {
+                const relativePath = String(file.relativePath || "");
+                const key = escapeAttr(relativePath);
+                const checked = state.selected.has(relativePath) ? "checked" : "";
+                const disabled = file.isRecording ? "disabled" : "";
+                const previewIcon = file.fileType === "image" ? "bi-eye" : "bi-play";
+
+                return '' +
+                    '<tr>' +
+                        '<td><input type="checkbox" class="file-check" data-path="' + key + '" ' + checked + ' ' + disabled + '></td>' +
+                        '<td class="col-file" title="' + escapeAttr(file.name) + '">' + escapeAttr(file.name) + '</td>' +
+                        '<td>' + buildTypeBadge(file.fileType) + '</td>' +
+                        '<td><span class="badge-chip">' + escapeAttr(file.channel) + '</span></td>' +
+                        '<td>' + escapeAttr(file.sizeStr || formatBytes(file.size)) + '</td>' +
+                        '<td>' + escapeAttr(file.timeStr || "--") + '</td>' +
+                        '<td>' + buildStatusBadge(!!file.isRecording) + '</td>' +
+                        '<td>' +
+                            '<div class="actions">' +
+                                '<button class="icon-btn preview-btn" title="预览" data-path="' + key + '" data-type="' + escapeAttr(file.fileType) + '" ' + (file.isRecording ? 'disabled' : '') + '><i class="bi ' + previewIcon + '"></i></button>' +
+                                '<button class="icon-btn download download-btn" title="下载" data-path="' + key + '" data-name="' + escapeAttr(file.name) + '"><i class="bi bi-download"></i></button>' +
+                                (!file.isRecording ? '<button class="icon-btn delete delete-btn" title="删除" data-path="' + key + '" data-name="' + escapeAttr(file.name) + '"><i class="bi bi-trash"></i></button>' : '') +
+                            '</div>' +
+                        '</td>' +
+                    '</tr>';
+            }).join('');
+
+            document.querySelectorAll('.file-check').forEach(checkbox => {
+                checkbox.addEventListener('change', event => {
+                    const path = event.target.getAttribute('data-path');
+                    if (!path) return;
+                    if (event.target.checked) {
+                        state.selected.add(path);
+                    } else {
+                        state.selected.delete(path);
+                    }
+                    updateSelectionBar();
+                });
+            });
+
+            document.querySelectorAll('.preview-btn').forEach(button => {
+                button.addEventListener('click', event => {
+                    const target = event.currentTarget;
+                    previewFile(target.getAttribute('data-path') || '', target.getAttribute('data-type') || '');
+                });
+            });
+
+            document.querySelectorAll('.download-btn').forEach(button => {
+                button.addEventListener('click', event => {
+                    const target = event.currentTarget;
+                    downloadFile(target.getAttribute('data-path') || '', target.getAttribute('data-name') || '');
+                });
+            });
+
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', event => {
+                    const target = event.currentTarget;
+                    deleteFile(target.getAttribute('data-path') || '', target.getAttribute('data-name') || '')
+                        .catch(error => showToast(error.message || '删除失败', 'error'));
+                });
+            });
+        }
+
+        async function refreshFiles(showTip = false) {
+            const tbody = document.getElementById("fileList");
+            tbody.innerHTML = '<tr><td colspan="8" class="empty-state">正在加载文件列表...</td></tr>';
+
+            try {
+                const response = await fetchJson('/api/recording/files');
+                const files = Array.isArray(response.files) ? response.files : [];
+                state.allFiles = files.map(file => ({
+                    ...file,
+                    size: Number(file.size || 0),
+                    fileType: getFileType(file.name)
+                }));
+                updateStats();
+                applyFilters();
+                if (showTip) {
+                    showToast('文件列表已更新');
+                }
+            } catch (error) {
+                state.allFiles = [];
+                state.filteredFiles = [];
+                state.selected.clear();
+                updateStats();
+                updateSelectionBar();
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">加载失败: ' + escapeAttr(error.message || '未知错误') + '</td></tr>';
+                showToast(error.message || '加载失败', 'error');
+            }
+        }
+
+        function previewFile(relativePath, fileType) {
+            const path = String(relativePath || '');
+            if (!path) return;
+            const encoded = encodeRelativePath(path);
+
+            if (fileType === 'image') {
+                window.open('/api/recording/preview/' + encoded + '?ts=' + Date.now(), '_blank');
+                return;
+            }
+
+            if (window.parent && window.parent !== window && typeof window.parent.openRecordingPreview === 'function') {
+                window.parent.openRecordingPreview(path);
+                return;
+            }
+            window.open('video_preview.html?file=' + encodeURIComponent(path), '_blank');
+        }
+
+        function downloadFile(relativePath, fileName) {
+            const path = String(relativePath || '');
+            if (!path) return;
+            const encoded = encodeRelativePath(path);
+            const link = document.createElement('a');
+            link.href = '/api/recording/preview/' + encoded + '?download=1';
+            link.download = String(fileName || '');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        async function deleteFile(relativePath, fileName) {
+            if (!window.confirm('确定删除文件 ' + String(fileName || '') + ' 吗？')) {
+                return;
+            }
+            try {
+                await fetchJson('/api/recording/files/delete', {
+                    method: 'POST',
+                    body: JSON.stringify({ relativePath: relativePath })
+                });
+                state.selected.delete(String(relativePath || ''));
+                showToast('文件已删除');
+                await refreshFiles(false);
+            } catch (error) {
+                showToast(error.message || '删除失败', 'error');
+            }
+        }
+
+        async function batchDelete() {
+            if (state.selected.size === 0) return;
+            const targets = state.filteredFiles.filter(file => state.selected.has(String(file.relativePath || '')) && !file.isRecording);
+            if (!targets.length) {
+                showToast('当前筛选下没有可删除的选中项', 'warning');
+                return;
+            }
+
+            if (!window.confirm('确定批量删除 ' + targets.length + ' 个文件吗？此操作不可恢复。')) {
+                return;
+            }
+
+            const btn = document.getElementById('batchDeleteBtn');
+            const text = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i>删除中...';
+
+            let ok = 0;
+            let failed = 0;
+            for (const file of targets) {
+                try {
+                    await fetchJson('/api/recording/files/delete', {
+                        method: 'POST',
+                        body: JSON.stringify({ relativePath: file.relativePath })
+                    });
+                    ok += 1;
+                } catch (error) {
+                    failed += 1;
+                }
+            }
+
+            state.selected.clear();
+            btn.innerHTML = text;
+            await refreshFiles(false);
+
+            if (failed === 0) {
+                showToast('批量删除完成，成功 ' + ok + ' 个');
+            } else {
+                showToast('批量删除完成，成功 ' + ok + ' 个，失败 ' + failed + ' 个', 'warning');
+            }
+        }
+
+        function bindEvents() {
+            document.querySelectorAll('input[name="typeFilter"]').forEach(radio => {
+                radio.addEventListener('change', event => {
+                    state.filters.type = event.target.value;
+                    applyFilters();
+                });
+            });
+
+            document.querySelectorAll('input[name="channelFilter"]').forEach(radio => {
+                radio.addEventListener('change', event => {
+                    state.filters.channel = event.target.value;
+                    applyFilters();
+                });
+            });
+
+            document.getElementById('startDate').addEventListener('change', event => {
+                state.filters.startDate = event.target.value || '';
+                applyFilters();
+            });
+
+            document.getElementById('endDate').addEventListener('change', event => {
+                state.filters.endDate = event.target.value || '';
+                applyFilters();
+            });
+
+            document.getElementById('clearDateBtn').addEventListener('click', () => {
+                state.filters.startDate = '';
+                state.filters.endDate = '';
+                document.getElementById('startDate').value = '';
+                document.getElementById('endDate').value = '';
+                applyFilters();
+            });
+
+            document.getElementById('refreshBtn').addEventListener('click', () => {
+                refreshFiles(true).catch(error => showToast(error.message || '刷新失败', 'error'));
+            });
+
+            document.getElementById('selectAll').addEventListener('change', event => {
+                const checked = !!event.target.checked;
+                state.filteredFiles.forEach(file => {
+                    if (file.isRecording) return;
+                    const key = String(file.relativePath || '');
+                    if (checked) state.selected.add(key);
+                    else state.selected.delete(key);
+                });
+                renderTable();
+                updateSelectionBar();
+            });
+
+            document.getElementById('batchDeleteBtn').addEventListener('click', () => {
+                batchDelete().catch(error => showToast(error.message || '批量删除失败', 'error'));
+            });
+        }
+
+        async function initializePage() {
+            bindEvents();
+            await refreshFiles(false);
+            state.refreshTimer = setInterval(() => {
+                refreshFiles(false).catch(() => {});
+            }, 15000);
+        }
+
+        window.addEventListener('beforeunload', () => {
+            if (state.refreshTimer) {
+                clearInterval(state.refreshTimer);
+                state.refreshTimer = null;
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initializePage().catch(error => {
+                showToast(error.message || '页面初始化失败', 'error');
+            });
+        });
+    </script>
+</body>
+</html>

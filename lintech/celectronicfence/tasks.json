@@ -1,0 +1,200 @@
+[
+    {
+        "algorithm": "region_intrusion",
+        "channelId": 20,
+        "configPath": "/tmp/cef_yolov8_runtime_uid1000/yolov8_demo_task_1.json",
+        "description": "电子围栏",
+        "filterConfigPath": "/tmp/cef_yolov8_runtime_uid1000/filter_task_1.json",
+        "id": 1,
+        "osdConfigPath": "/tmp/cef_yolov8_runtime_uid1000/osd_task_1.json",
+        "outputRtsp": "rtsp://localhost:8554/live/0_1001/",
+        "pid": 0,
+        "regionConfigs": [
+            {
+                "createdAtMs": 1773969575531,
+                "frameHeight": 1080,
+                "frameWidth": 1920,
+                "id": "region_1773969575531_be5d29",
+                "label": "person",
+                "ownerAlgorithm": "region_intrusion",
+                "ownerTaskId": 1,
+                "ownerTaskNumber": "区域入侵",
+                "points": [
+                    {
+                        "x": 688,
+                        "y": 164
+                    },
+                    {
+                        "x": 1156,
+                        "y": 126
+                    },
+                    {
+                        "x": 1528,
+                        "y": 991
+                    },
+                    {
+                        "x": 1061,
+                        "y": 1061
+                    },
+                    {
+                        "x": 667,
+                        "y": 1061
+                    },
+                    {
+                        "x": 624,
+                        "y": 576
+                    }
+                ],
+                "regionType": "exclusive",
+                "shape": "polygon",
+                "updatedAtMs": 1773969579254
+            }
+        ],
+        "remoteUrl": "http://192.168.1.175:7550/receive",
+        "status": "stopped",
+        "streamChannelId": 1001,
+        "taskNumber": "区域入侵",
+        "threshold": 0.3,
+        "thresholdConfigPath": "/tmp/cef_yolov8_runtime_uid1000/yolov8_classthresh_task_1.json",
+        "thresholdMode": "person_only",
+        "videoSourceId": 8
+    },
+    {
+        "algorithm": "明烟明火",
+        "channelId": 10,
+        "description": "烟火检测",
+        "flameThreshold": 0.3,
+        "id": 2,
+        "outputRtsp": "rtsp://localhost:8554/task_2",
+        "pid": 0,
+        "remoteUrl": "http://192.168.1.175:7550/receive",
+        "smokeThreshold": 0.25,
+        "status": "stopped",
+        "taskNumber": "烟火检测",
+        "videoSourceId": 3
+    },
+    {
+        "algorithm": "face_recognition",
+        "channelId": 20,
+        "configPath": "/tmp/cef_face_runtime_uid1000/retinaface_distributor_resnet_faiss_converger_runtime_task_3.json",
+        "description": "人脸检测",
+        "faceLowLatencyMode": true,
+        "facePreviewFps": 10,
+        "faceRecognitionInterval": 1,
+        "faceSampleInterval": 3,
+        "faceSampleStrategy": "DROP",
+        "id": 3,
+        "outputRtsp": "rtsp://localhost:8554/live/0_1003/",
+        "pid": 0,
+        "remoteUrl": "http://192.168.1.175:7550/receive",
+        "status": "stopped",
+        "streamChannelId": 1003,
+        "taskNumber": "人脸识别",
+        "videoSourceId": 8
+    },
+    {
+        "algorithm": "打架检测",
+        "channelId": 20,
+        "demoMode": false,
+        "description": "打架检测",
+        "fightThreshold": 0.6,
+        "id": 4,
+        "outputRtsp": "rtsp://localhost:8554/task_4",
+        "pid": 0,
+        "remoteUrl": "http://192.168.1.175:7550/receive",
+        "status": "stopped",
+        "taskNumber": "打架检测",
+        "videoSourceId": 8
+    },
+    {
+        "algorithm": "跌倒检测",
+        "channelId": 20,
+        "demoMode": false,
+        "description": "跌倒检测",
+        "fallFrames": 2,
+        "fallPreset": "standard",
+        "fallRatioMin": 1.15,
+        "fallThreshold": 0.6,
+        "heightDropRatio": 0.8,
+        "id": 5,
+        "minBottomRatio": 0.5,
+        "minCenterDropRatio": 0.12,
+        "outputRtsp": "rtsp://localhost:8554/task_5",
+        "pid": 0,
+        "remoteUrl": "http://192.168.1.175:7550/receive",
+        "staticBottomRatio": 0.6,
+        "staticFallFrames": 2,
+        "staticFallRatioMin": 1.35,
+        "staticHeightRatioMax": 0.4,
+        "status": "stopped",
+        "taskNumber": "跌倒检测",
+        "trackIouThresh": 0.35,
+        "uprightFrames": 2,
+        "uprightRatioMax": 0.85,
+        "videoSourceId": 8
+    },
+    {
+        "algorithm": "registered_person_tracking",
+        "channelId": 20,
+        "configPath": "/tmp/cef_registered_person_tracking_runtime_uid1000/registered_person_tracking_runtime_task_6.json",
+        "description": "对区域范围内人脸识别",
+        "faceLowLatencyMode": true,
+        "facePreviewFps": 25,
+        "faceRecognitionInterval": 1,
+        "faceSampleInterval": 1,
+        "faceSampleStrategy": "DROP",
+        "faceSimilarityThreshold": 0.4,
+        "filterConfigPath": "/tmp/cef_registered_person_tracking_runtime_uid1000/filter_runtime_task_6.json",
+        "id": 6,
+        "outputRtsp": "rtsp://localhost:8554/live/0_1006/",
+        "pid": 308449,
+        "pidStartTime": 1272095,
+        "regionConfigs": [
+            {
+                "createdAtMs": 1773988078164,
+                "frameHeight": 1080,
+                "frameWidth": 1920,
+                "id": "region_1773988078164_d42a62",
+                "label": "track",
+                "ownerAlgorithm": "registered_person_tracking",
+                "ownerTaskId": 6,
+                "ownerTaskNumber": "人员追踪",
+                "points": [
+                    {
+                        "x": 59,
+                        "y": 92
+                    },
+                    {
+                        "x": 1224,
+                        "y": 132
+                    },
+                    {
+                        "x": 1882,
+                        "y": 653
+                    },
+                    {
+                        "x": 1586,
+                        "y": 1051
+                    },
+                    {
+                        "x": 673,
+                        "y": 1059
+                    },
+                    {
+                        "x": 54,
+                        "y": 1020
+                    }
+                ],
+                "regionType": "exclusive",
+                "shape": "polygon",
+                "updatedAtMs": 1773988081595
+            }
+        ],
+        "remoteUrl": "http://192.168.1.175:7550/receive",
+        "status": "running",
+        "streamChannelId": 1006,
+        "taskNumber": "人员追踪",
+        "trackingDetectionThreshold": 0.3,
+        "videoSourceId": 8
+    }
+]

@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网络配置</title>
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="fontawesome-all.min.css">
+    <script src="axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background:
+                radial-gradient(circle at top, rgba(0, 162, 255, 0.18) 0%, rgba(0, 162, 255, 0) 34%),
+                linear-gradient(180deg, #07111f 0%, #0a1628 56%, #09111d 100%);
+            color: #dbe8ff;
+            height: 100vh;
+            padding: 16px;
+        }
+
+        .container {
+            max-width: 95%;
+            width: 100%;
+            margin: 0 auto;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        @media (min-width: 1400px) {
+            .container {
+                max-width: 1800px;
+            }
+        }
+
+        .container > .header {
+            background: linear-gradient(90deg, rgba(0, 30, 60, 0.62), rgba(0, 50, 100, 0.45)) !important;
+            padding: 9px 14px !important;
+            border-radius: 8px !important;
+            border: 1px solid rgba(0, 162, 255, 0.35) !important;
+            box-shadow: 0 0 18px rgba(0, 162, 255, 0.22) !important;
+            margin-bottom: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            min-height: 48px;
+        }
+
+        .container > .header .header-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #00d4ff !important;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            line-height: 1.1;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .container > .header .header-title i {
+            color: #00d4ff !important;
+            font-size: 17px;
+        }
+
+        .network-panel {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(180deg, rgba(10, 20, 34, 0.96) 0%, rgba(8, 15, 27, 0.94) 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(0, 162, 255, 0.16);
+            box-shadow: 0 18px 36px rgba(2, 8, 20, 0.34);
+            overflow: hidden;
+        }
+
+        .panel-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 18px;
+            border-bottom: 1px solid rgba(87, 112, 150, 0.18);
+        }
+
+        .panel-info {
+            min-width: 0;
+        }
+
+        .panel-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #edf6ff;
+            line-height: 1.2;
+        }
+
+        .panel-subtitle {
+            margin-top: 4px;
+            font-size: 12px;
+            color: #89a4c8;
+            line-height: 1.4;
+        }
+
+        .network-table-wrap {
+            flex: 1;
+            min-height: 0;
+            overflow: auto;
+        }
+
+        .network-table-wrap::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .network-table-wrap::-webkit-scrollbar-track {
+            background: rgba(7, 16, 28, 0.72);
+        }
+
+        .network-table-wrap::-webkit-scrollbar-thumb {
+            background: rgba(0, 212, 255, 0.36);
+            border-radius: 999px;
+        }
+
+        .network-table {
+            width: 100%;
+            min-width: 1420px;
+            border-collapse: separate;
+            border-spacing: 0;
+            color: #dce8fb;
+        }
+
+        .network-table thead {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: rgba(10, 20, 40, 0.98);
+        }
+
+        .network-table th {
+            padding: 14px 12px;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 700;
+            color: #7feaff;
+            border-bottom: 1px solid rgba(0, 162, 255, 0.26);
+            white-space: nowrap;
+            background: rgba(10, 20, 40, 0.98);
+        }
+
+        .network-table td {
+            padding: 14px 12px;
+            font-size: 13px;
+            color: #d7e5fa;
+            border-bottom: 1px solid rgba(0, 162, 255, 0.1);
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        .network-table tbody tr:hover td {
+            background: rgba(0, 162, 255, 0.08);
+        }
+
+        .network-table th:last-child,
+        .network-table td:last-child {
+            text-align: right;
+            padding-right: 18px;
+        }
+
+        .iface-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+
+        .iface-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: #f4f8ff;
+        }
+
+        .iface-desc {
+            font-size: 11px;
+            color: #85a0c4;
+        }
+
+        .text-muted-dark {
+            color: #8aa3c6;
+        }
+
+        .dns-list {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            max-width: 260px;
+        }
+
+        .dns-chip,
+        .type-chip,
+        .method-chip,
+        .status-chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            min-height: 28px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.1;
+            border: 1px solid transparent;
+        }
+
+        .dns-chip {
+            background: rgba(18, 31, 49, 0.95);
+            border-color: rgba(88, 116, 155, 0.24);
+            color: #dbe8ff;
+        }
+
+        .type-chip {
+            background: rgba(131, 160, 197, 0.12);
+            border-color: rgba(131, 160, 197, 0.2);
+            color: #c9d8ec;
+            text-transform: lowercase;
+        }
+
+        .method-chip.is-dhcp {
+            background: rgba(0, 212, 255, 0.14);
+            border-color: rgba(0, 212, 255, 0.2);
+            color: #7feaff;
+        }
+
+        .method-chip.is-manual {
+            background: rgba(255, 205, 96, 0.14);
+            border-color: rgba(255, 205, 96, 0.2);
+            color: #ffd974;
+        }
+
+        .status-chip.is-connected {
+            background: rgba(72, 209, 146, 0.14);
+            border-color: rgba(72, 209, 146, 0.2);
+            color: #7df0bb;
+        }
+
+        .status-chip.is-disconnected {
+            background: rgba(255, 112, 112, 0.14);
+            border-color: rgba(255, 112, 112, 0.2);
+            color: #ff9f9f;
+        }
+
+        .status-chip::before {
+            content: '';
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: currentColor;
+            box-shadow: 0 0 10px currentColor;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            white-space: nowrap;
+            min-height: 36px;
+            padding: 8px 16px;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2d8cff 0%, #0a60cc 100%);
+            color: #ffffff;
+            box-shadow: 0 10px 22px rgba(10, 96, 204, 0.28);
+        }
+
+        .btn-secondary {
+            background: rgba(18, 31, 49, 0.95);
+            border: 1px solid rgba(88, 116, 155, 0.24);
+            color: #d6e5ff;
+        }
+
+        .btn-edit {
+            min-width: 74px;
+            background: rgba(34, 128, 255, 0.16);
+            border: 1px solid rgba(73, 158, 255, 0.28);
+            color: #8fd2ff;
+        }
+
+        .btn-edit:hover {
+            box-shadow: 0 10px 22px rgba(10, 96, 204, 0.2);
+        }
+
+        .empty-state {
+            padding: 48px 20px !important;
+            text-align: center;
+            color: #8ba3c5 !important;
+            font-size: 14px !important;
+        }
+
+        .network-modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(3, 10, 20, 0.58);
+            backdrop-filter: blur(8px);
+            z-index: 10000;
+        }
+
+        .network-modal.show {
+            display: flex;
+        }
+
+        .network-modal-card {
+            width: min(720px, calc(100vw - 24px));
+            max-height: calc(100vh - 24px);
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(180deg, rgba(10, 20, 34, 0.98) 0%, rgba(8, 15, 27, 0.96) 100%);
+            border: 1px solid rgba(0, 162, 255, 0.18);
+            border-radius: 20px;
+            box-shadow: 0 24px 50px rgba(2, 8, 20, 0.42);
+            overflow: hidden;
+        }
+
+        .network-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 18px 20px;
+            border-bottom: 1px solid rgba(87, 112, 150, 0.18);
+        }
+
+        .network-modal-title {
+            min-width: 0;
+        }
+
+        .network-modal-title h3 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 700;
+            color: #f4f8ff;
+        }
+
+        .network-modal-title p {
+            margin: 6px 0 0;
+            font-size: 12px;
+            color: #8ba3c5;
+        }
+
+        .network-modal-close {
+            width: 34px;
+            height: 34px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(18, 31, 49, 0.95);
+            color: #bcd0ea;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .network-modal-close:hover {
+            background: rgba(29, 46, 70, 0.95);
+            color: #ffffff;
+        }
+
+        .network-modal-body {
+            flex: 1;
+            min-height: 0;
+            overflow: auto;
+            padding: 18px 20px 20px;
+        }
+
+        .network-modal-body::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .network-modal-body::-webkit-scrollbar-track {
+            background: rgba(7, 16, 28, 0.72);
+        }
+
+        .network-modal-body::-webkit-scrollbar-thumb {
+            background: rgba(0, 212, 255, 0.36);
+            border-radius: 999px;
+        }
+
+        .network-modal-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px 16px;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .manual-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px 16px;
+        }
+
+        .manual-grid.hidden {
+            display: none;
+        }
+
+        .form-group {
+            min-width: 0;
+        }
+
+        .form-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #dce8fb;
+        }
+
+        .form-label i {
+            color: #63c9ff;
+            font-size: 12px;
+        }
+
+        .form-control,
+        .form-select {
+            width: 100%;
+            min-height: 42px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(77, 102, 140, 0.26);
+            background: rgba(12, 23, 38, 0.96);
+            color: #edf4ff;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            box-shadow: none;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: rgba(76, 143, 255, 0.72);
+            background: rgba(15, 27, 44, 0.98);
+            box-shadow: 0 0 0 2px rgba(57, 120, 227, 0.16);
+        }
+
+        .form-control::placeholder {
+            color: #6e86a8;
+        }
+
+        .form-control:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .form-select {
+            color-scheme: dark;
+            background-color: rgba(12, 23, 38, 0.96);
+        }
+
+        .field-help {
+            margin-top: 6px;
+            font-size: 12px;
+            color: #87a0c4;
+            line-height: 1.4;
+        }
+
+        .network-modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 14px 20px 18px;
+            border-top: 1px solid rgba(87, 112, 150, 0.18);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(3, 10, 20, 0.62);
+            backdrop-filter: blur(5px);
+            z-index: 11000;
+        }
+
+        .loading-overlay.show {
+            display: flex;
+        }
+
+        .loading-card {
+            min-width: 280px;
+            padding: 24px 26px;
+            border-radius: 18px;
+            background: linear-gradient(180deg, rgba(10, 20, 34, 0.98) 0%, rgba(8, 15, 27, 0.96) 100%);
+            border: 1px solid rgba(0, 162, 255, 0.18);
+            box-shadow: 0 24px 50px rgba(2, 8, 20, 0.42);
+            text-align: center;
+            color: #dbe8ff;
+        }
+
+        .spinner {
+            width: 46px;
+            height: 46px;
+            margin: 0 auto 14px;
+            border: 4px solid rgba(127, 234, 255, 0.18);
+            border-top-color: #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-card p {
+            margin: 0;
+            font-size: 14px;
+            color: #dbe8ff;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 900px) {
+            body {
+                padding: 12px;
+            }
+
+            .panel-toolbar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .panel-toolbar .btn {
+                width: 100%;
+            }
+
+            .network-modal {
+                padding: 12px;
+            }
+
+            .network-modal-card {
+                width: 100%;
+                max-height: calc(100vh - 16px);
+            }
+
+            .network-modal-grid,
+            .manual-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .network-modal-footer {
+                flex-direction: column-reverse;
+            }
+
+            .network-modal-footer .btn {
+                width: 100%;
+            }
+        }
+        body {
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 95%;
+        }
+
+        .network-panel {
+            border-radius: 12px;
+        }
+
+        .panel-toolbar {
+            min-height: 56px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(180deg, rgba(8, 31, 53, 0.96), rgba(8, 22, 37, 0.98)) !important;
+            border-color: rgba(0, 212, 255, 0.28) !important;
+            color: #eef9ff !important;
+        }
+
+        .btn-secondary,
+        .btn-edit {
+            background: rgba(8, 20, 34, 0.82) !important;
+            border-color: rgba(0, 162, 255, 0.18) !important;
+            color: #dbe8ff !important;
+        }
+
+        .btn-edit:hover,
+        .btn-secondary:hover {
+            background: rgba(10, 28, 47, 0.92) !important;
+            border-color: rgba(0, 212, 255, 0.3) !important;
+        }
+
+        .network-modal-card {
+            background: linear-gradient(180deg, rgba(10, 20, 34, 0.98), rgba(8, 15, 27, 0.96)) !important;
+            border: 1px solid rgba(0, 162, 255, 0.18) !important;
+            box-shadow: 0 22px 40px rgba(2, 8, 20, 0.42) !important;
+        }
+
+        .network-modal-header {
+            background: linear-gradient(90deg, rgba(5, 16, 29, 0.96), rgba(8, 26, 46, 0.92)) !important;
+            border-bottom: 1px solid rgba(0, 162, 255, 0.14) !important;
+        }
+
+        /* Final black sync: darken the network table/header surfaces without changing text colors. */
+        html body {
+            background:
+                radial-gradient(circle at top, rgba(118, 128, 146, 0.12) 0%, rgba(118, 128, 146, 0) 32%),
+                linear-gradient(180deg, #050608 0%, #090b0f 56%, #07090c 100%) !important;
+        }
+
+        html body .container > .header {
+            background: linear-gradient(180deg, rgba(9, 11, 15, 0.99), rgba(14, 18, 24, 0.96)) !important;
+            border-color: rgba(122, 136, 158, 0.18) !important;
+            box-shadow: 0 16px 30px rgba(0, 0, 0, 0.38) !important;
+        }
+
+        html body .network-panel {
+            background: linear-gradient(180deg, rgba(9, 11, 15, 0.98), rgba(13, 17, 23, 0.95)) !important;
+            border-color: rgba(122, 136, 158, 0.14) !important;
+            box-shadow: 0 20px 38px rgba(0, 0, 0, 0.44) !important;
+        }
+
+        html body .panel-toolbar {
+            background: linear-gradient(180deg, rgba(12, 15, 20, 0.92), rgba(10, 13, 18, 0.9)) !important;
+            border-bottom-color: rgba(122, 136, 158, 0.12) !important;
+        }
+
+        html body .network-table thead,
+        html body .network-table th {
+            background: linear-gradient(180deg, rgba(11, 13, 18, 0.99), rgba(18, 22, 28, 0.97)) !important;
+        }
+
+        html body .network-table th {
+            border-bottom-color: rgba(122, 136, 158, 0.2) !important;
+        }
+
+        html body .network-table td {
+            border-bottom-color: rgba(122, 136, 158, 0.08) !important;
+        }
+
+        html body .network-table tbody tr:hover td {
+            background: rgba(255, 255, 255, 0.035) !important;
+        }
+
+        html body .network-modal-card {
+            background: linear-gradient(180deg, rgba(9, 11, 15, 0.98), rgba(13, 17, 23, 0.95)) !important;
+            border-color: rgba(122, 136, 158, 0.18) !important;
+            box-shadow: 0 20px 38px rgba(0, 0, 0, 0.44) !important;
+        }
+
+        html body .network-modal-header {
+            background: linear-gradient(90deg, rgba(11, 13, 18, 0.99), rgba(18, 22, 28, 0.96)) !important;
+            border-bottom-color: rgba(122, 136, 158, 0.14) !important;
+        }
+
+        html body #networkModal .form-control,
+        html body #networkModal .form-select {
+            border: 1px solid rgba(122, 136, 158, 0.18) !important;
+            background: rgba(10, 13, 18, 0.96) !important;
+            color: #edf4ff !important;
+            box-shadow: none !important;
+        }
+
+        html body #networkModal .form-control:focus,
+        html body #networkModal .form-select:focus {
+            border-color: rgba(160, 178, 202, 0.24) !important;
+            background: rgba(14, 17, 22, 0.98) !important;
+            box-shadow: 0 0 0 2px rgba(94, 106, 126, 0.12) !important;
+        }
+
+        html body #networkModal .form-control::placeholder {
+            color: #6e86a8 !important;
+        }
+
+        html body #networkModal .form-select {
+            color-scheme: dark;
+            background-color: rgba(10, 13, 18, 0.96) !important;
+        }
+    </style>
+    <link rel="stylesheet" href="pcb-theme.css?v=20260323-black3">
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-title">
+                <i class="fas fa-network-wired"></i>
+                网络配置
+            </div>
+        </div>
+
+        <div class="network-panel">
+            <div class="panel-toolbar">
+                <div class="panel-info">
+                    <div class="panel-title">网络接口总览</div>
+                </div>
+                <button class="btn btn-secondary" id="reloadBtn" type="button">
+                    <i class="fas fa-sync-alt"></i>
+                    重新加载
+                </button>
+            </div>
+
+            <div class="network-table-wrap">
+                <table class="network-table">
+                    <thead>
+                        <tr>
+                            <th>网卡名称</th>
+                            <th>网络名称</th>
+                            <th>网络地址</th>
+                            <th>子网掩码</th>
+                            <th>网关地址</th>
+                            <th>物理地址</th>
+                            <th>分配方式</th>
+                            <th>DNS</th>
+                            <th>网络类型</th>
+                            <th>连接状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="networkTableBody">
+                        <tr>
+                            <td colspan="11" class="empty-state">正在加载网络配置...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="network-modal" id="networkModal">
+        <div class="network-modal-card" role="dialog" aria-modal="true" aria-labelledby="modalIfaceName">
+            <div class="network-modal-header">
+                <div class="network-modal-title">
+                    <h3 id="modalIfaceName">eth0</h3>
+                    <p id="modalIfaceDesc">主网口</p>
+                </div>
+                <button class="network-modal-close" id="modalCloseBtn" type="button" aria-label="关闭">&times;</button>
+            </div>
+            <div class="network-modal-body">
+                <div class="network-modal-grid">
+                    <div class="form-group full-width">
+                        <label class="form-label" for="modalDhcp">
+                            <i class="fas fa-cog"></i>
+                            分配方式
+                        </label>
+                        <select class="form-select" id="modalDhcp">
+                            <option value="no">手动设置</option>
+                            <option value="yes">自动获取 (DHCP)</option>
+                        </select>
+                    </div>
+
+                    <div class="manual-grid full-width" id="manualFields">
+                        <div class="form-group">
+                            <label class="form-label" for="modalAddress">
+                                <i class="fas fa-network-wired"></i>
+                                网络地址
+                            </label>
+                            <input type="text" class="form-control" id="modalAddress" placeholder="例如: 192.168.1.116">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="modalNetmask">
+                                <i class="fas fa-mask"></i>
+                                子网掩码
+                            </label>
+                            <input type="text" class="form-control" id="modalNetmask" placeholder="例如: 255.255.255.0">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="modalGateway">
+                                <i class="fas fa-route"></i>
+                                网关地址
+                            </label>
+                            <input type="text" class="form-control" id="modalGateway" placeholder="例如: 192.168.1.1">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="modalDns">
+                                <i class="fas fa-server"></i>
+                                DNS
+                            </label>
+                            <input type="text" class="form-control" id="modalDns" placeholder="例如: 8.8.8.8 8.8.4.4">
+                            <div class="field-help">多个 DNS 可使用空格或逗号分隔。</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="network-modal-footer">
+                <button class="btn btn-secondary" id="modalCancelBtn" type="button">取消</button>
+                <button class="btn btn-primary" id="modalSaveBtn" type="button">
+                    <i class="fas fa-save"></i>
+                    保存并应用
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-card">
+            <div class="spinner"></div>
+            <p>正在应用网络配置，请稍候...</p>
+        </div>
+    </div>
+
+    <script>
+        const TABLE_COLUMN_COUNT = 11;
+        const INTERFACE_ORDER = ['eth0', 'eth1'];
+        const INTERFACE_META = {
+            eth0: { label: '主网口' },
+            eth1: { label: '副网口' }
+        };
+
+        const networkState = {
+            config: {},
+            status: {},
+            editingIface: null
+        };
+
+        window.onload = function() {
+            bindEvents();
+            refreshNetworkPage();
+            setInterval(loadNetworkStatusOnly, 5000);
+        };
+
+        function bindEvents() {
+            document.getElementById('reloadBtn').addEventListener('click', () => {
+                refreshNetworkPage();
+            });
+
+            document.getElementById('modalCloseBtn').addEventListener('click', closeNetworkModal);
+            document.getElementById('modalCancelBtn').addEventListener('click', closeNetworkModal);
+            document.getElementById('modalSaveBtn').addEventListener('click', saveInterfaceConfig);
+            document.getElementById('modalDhcp').addEventListener('change', toggleModalManualFields);
+
+            document.getElementById('networkModal').addEventListener('click', (event) => {
+                if (event.target.id === 'networkModal') {
+                    closeNetworkModal();
+                }
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    closeNetworkModal();
+                }
+            });
+        }
+
+        function escapeHtml(text) {
+            return String(text || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function createDefaultConfig() {
+            return {
+                dhcp4: 'no',
+                addresses: [],
+                gateway4: '',
+                nameservers: {
+                    addresses: []
+                }
+            };
+        }
+
+        function normalizeConfig(rawConfig) {
+            const normalized = {};
+            INTERFACE_ORDER.forEach((iface) => {
+                const source = rawConfig && rawConfig[iface] ? rawConfig[iface] : {};
+                normalized[iface] = {
+                    dhcp4: source.dhcp4 === 'yes' ? 'yes' : 'no',
+                    addresses: Array.isArray(source.addresses) ? source.addresses.map(String) : [],
+                    gateway4: String(source.gateway4 || ''),
+                    nameservers: {
+                        addresses: source.nameservers && Array.isArray(source.nameservers.addresses)
+                            ? source.nameservers.addresses.map(String)
+                            : []
+                    }
+                };
+            });
+            return normalized;
+        }
+
+        function normalizeStatus(rawStatus) {
+            const normalized = {};
+            INTERFACE_ORDER.forEach((iface) => {
+                const source = rawStatus && rawStatus[iface] ? rawStatus[iface] : {};
+                normalized[iface] = {
+                    connected: !!source.connected,
+                    macAddress: String(source.macAddress || ''),
+                    addressCidr: String(source.addressCidr || ''),
+                    gateway4: String(source.gateway4 || ''),
+                    type: String(source.type || 'ether')
+                };
+            });
+            return normalized;
+        }
+
+        async function refreshNetworkPage() {
+            renderTableMessage('正在加载网络配置...');
+
+            try {
+                const [configResp, statusResp] = await Promise.all([
+                    axios.get('/api/network/config').catch(() => ({ data: { status: 'error', config: {} } })),
+                    axios.get('/api/network/status').catch(() => ({ data: { status: 'error', interfaces: {} } }))
+                ]);
+
+                const configOk = configResp && configResp.data && configResp.data.status === 'success';
+                const statusOk = statusResp && statusResp.data && statusResp.data.status === 'success';
+
+                if (!configOk && !statusOk) {
+                    renderTableMessage('加载网络配置失败，请稍后重试');
+                    return;
+                }
+
+                networkState.config = normalizeConfig(configOk ? configResp.data.config : {});
+                networkState.status = normalizeStatus(statusOk ? statusResp.data.interfaces : {});
+                renderNetworkTable();
+            } catch (error) {
+                console.error('加载网络配置失败:', error);
+                renderTableMessage('加载网络配置失败，请稍后重试');
+            }
+        }
+
+        async function loadNetworkStatusOnly() {
+            try {
+                const response = await axios.get('/api/network/status');
+                if (response.data && response.data.status === 'success') {
+                    networkState.status = normalizeStatus(response.data.interfaces || {});
+                    renderNetworkTable();
+                }
+            } catch (error) {
+                console.error('检测网络状态失败:', error);
+            }
+        }
+
+        function renderTableMessage(message) {
+            document.getElementById('networkTableBody').innerHTML =
+                '<tr><td colspan="' + TABLE_COLUMN_COUNT + '" class="empty-state">' + escapeHtml(message) + '</td></tr>';
+        }
+
+        function renderNetworkTable() {
+            const tbody = document.getElementById('networkTableBody');
+            tbody.innerHTML = INTERFACE_ORDER.map((iface) => buildInterfaceRowHtml(iface)).join('');
+        }
+
+        function buildInterfaceRowHtml(iface) {
+            const summary = getInterfaceSummary(iface);
+            const dnsHtml = summary.dnsServers.length
+                ? summary.dnsServers.map((dns) => (
+                    '<span class="dns-chip" title="' + escapeHtml(dns) + '">' + escapeHtml(dns) + '</span>'
+                )).join('')
+                : '<span class="text-muted-dark">--</span>';
+
+            return '' +
+                '<tr>' +
+                    '<td><div class="iface-cell"><span class="iface-name">' + escapeHtml(iface) + '</span><span class="iface-desc">接口标识</span></div></td>' +
+                    '<td><div class="iface-cell"><span class="iface-name">' + escapeHtml(summary.displayName) + '</span><span class="iface-desc">网络名称</span></div></td>' +
+                    '<td title="' + escapeHtml(summary.address) + '">' + escapeHtml(summary.address) + '</td>' +
+                    '<td title="' + escapeHtml(summary.netmask) + '">' + escapeHtml(summary.netmask) + '</td>' +
+                    '<td title="' + escapeHtml(summary.gateway) + '">' + escapeHtml(summary.gateway) + '</td>' +
+                    '<td title="' + escapeHtml(summary.macAddress) + '">' + escapeHtml(summary.macAddress) + '</td>' +
+                    '<td>' + getMethodChip(summary.dhcpEnabled) + '</td>' +
+                    '<td><div class="dns-list">' + dnsHtml + '</div></td>' +
+                    '<td><span class="type-chip">' + escapeHtml(summary.type) + '</span></td>' +
+                    '<td>' + getStatusChip(summary.connected) + '</td>' +
+                    '<td><button class="btn btn-edit" type="button" onclick="openEditModal(\'' + iface + '\')">编辑</button></td>' +
+                '</tr>';
+        }
+
+        function getInterfaceSummary(iface) {
+            const config = networkState.config[iface] || createDefaultConfig();
+            const status = networkState.status[iface] || {};
+            const liveAddress = parseAddressCidr(status.addressCidr || '');
+            const configAddress = parseAddressCidr((config.addresses && config.addresses[0]) || '');
+
+            return {
+                displayName: INTERFACE_META[iface] ? INTERFACE_META[iface].label : iface,
+                address: liveAddress.address || configAddress.address || '--',
+                netmask: liveAddress.netmask || configAddress.netmask || '--',
+                gateway: String(status.gateway4 || config.gateway4 || '--'),
+                macAddress: String(status.macAddress || '--'),
+                dhcpEnabled: config.dhcp4 === 'yes',
+                dnsServers: getDnsServers(config),
+                connected: !!status.connected,
+                type: String(status.type || 'ether')
+            };
+        }
+
+        function getDnsServers(config) {
+            if (!config || !config.nameservers || !Array.isArray(config.nameservers.addresses)) {
+                return [];
+            }
+            return config.nameservers.addresses.map((item) => String(item || '').trim()).filter(Boolean);
+        }
+
+        function getMethodChip(dhcpEnabled) {
+            if (dhcpEnabled) {
+                return '<span class="method-chip is-dhcp">自动获取</span>';
+            }
+            return '<span class="method-chip is-manual">手动设置</span>';
+        }
+
+        function getStatusChip(connected) {
+            if (connected) {
+                return '<span class="status-chip is-connected">已连接</span>';
+            }
+            return '<span class="status-chip is-disconnected">未连接</span>';
+        }
+
+        function parseAddressCidr(addressCidr) {
+            const text = String(addressCidr || '').trim();
+            if (!text || text.indexOf('/') < 0) {
+                return { address: '', netmask: '' };
+            }
+
+            const parts = text.split('/');
+            if (parts.length !== 2 || !validateIp(parts[0])) {
+                return { address: '', netmask: '' };
+            }
+
+            const cidr = Number(parts[1]);
+            if (!Number.isInteger(cidr) || cidr < 0 || cidr > 32) {
+                return { address: '', netmask: '' };
+            }
+
+            return {
+                address: parts[0],
+                netmask: cidrToNetmask(cidr)
+            };
+        }
+
+        function cidrToNetmask(cidr) {
+            const bits = '1'.repeat(cidr).padEnd(32, '0');
+            const parts = [];
+            for (let index = 0; index < 4; index += 1) {
+                parts.push(String(parseInt(bits.slice(index * 8, (index + 1) * 8), 2)));
+            }
+            return parts.join('.');
+        }
+
+        function netmaskToCidr(netmask) {
+            if (!validateIp(netmask)) {
+                return null;
+            }
+
+            const binary = netmask.split('.')
+                .map((part) => Number(part).toString(2).padStart(8, '0'))
+                .join('');
+
+            if (!/^1*0*$/.test(binary)) {
+                return null;
+            }
+
+            const firstZeroIndex = binary.indexOf('0');
+            return firstZeroIndex === -1 ? 32 : firstZeroIndex;
+        }
+
+        function validateIp(ip) {
+            const pattern = /^(\d{1,3}\.){3}\d{1,3}$/;
+            if (!pattern.test(ip)) {
+                return false;
+            }
+
+            return ip.split('.').every((part) => {
+                const num = Number(part);
+                return Number.isInteger(num) && num >= 0 && num <= 255;
+            });
+        }
+
+        function normalizeDnsInput(value) {
+            return String(value || '')
+                .split(/[\s,，]+/)
+                .map((item) => item.trim())
+                .filter(Boolean);
+        }
+
+        function openEditModal(iface) {
+            const config = networkState.config[iface] || createDefaultConfig();
+            const parsed = parseAddressCidr((config.addresses && config.addresses[0]) || '');
+
+            networkState.editingIface = iface;
+
+            document.getElementById('modalIfaceName').textContent = iface;
+            document.getElementById('modalIfaceDesc').textContent = INTERFACE_META[iface]
+                ? INTERFACE_META[iface].label
+                : iface;
+            document.getElementById('modalDhcp').value = config.dhcp4 === 'yes' ? 'yes' : 'no';
+            document.getElementById('modalAddress').value = parsed.address || '';
+            document.getElementById('modalNetmask').value = parsed.netmask || '';
+            document.getElementById('modalGateway').value = String(config.gateway4 || '');
+            document.getElementById('modalDns').value = getDnsServers(config).join(' ');
+
+            toggleModalManualFields();
+            document.getElementById('networkModal').classList.add('show');
+        }
+
+        function closeNetworkModal(forceClose = false) {
+            if (!forceClose && document.getElementById('loadingOverlay').classList.contains('show')) {
+                return;
+            }
+
+            networkState.editingIface = null;
+            document.getElementById('networkModal').classList.remove('show');
+        }
+
+        function toggleModalManualFields() {
+            const dhcpValue = document.getElementById('modalDhcp').value;
+            const manualFields = document.getElementById('manualFields');
+            const manualInputs = manualFields.querySelectorAll('input');
+            const hidden = dhcpValue === 'yes';
+
+            manualFields.classList.toggle('hidden', hidden);
+            manualInputs.forEach((input) => {
+                input.disabled = hidden;
+            });
+        }
+
+        function buildPayloadFromStoredConfig(iface) {
+            const config = networkState.config[iface] || createDefaultConfig();
+            const payload = {
+                dhcp4: config.dhcp4 === 'yes' ? 'yes' : 'no'
+            };
+
+            if (payload.dhcp4 === 'no') {
+                const address = Array.isArray(config.addresses) && config.addresses[0]
+                    ? String(config.addresses[0]).trim()
+                    : '';
+                const gateway = String(config.gateway4 || '').trim();
+                const dnsServers = getDnsServers(config);
+
+                if (address) {
+                    payload.addresses = [address];
+                }
+                if (gateway) {
+                    payload.gateway4 = gateway;
+                }
+                if (dnsServers.length) {
+                    payload.nameservers = { addresses: dnsServers };
+                }
+            }
+
+            return payload;
+        }
+
+        function buildPayloadFromModal() {
+            const dhcpValue = document.getElementById('modalDhcp').value === 'yes' ? 'yes' : 'no';
+            const payload = {
+                dhcp4: dhcpValue
+            };
+
+            if (dhcpValue === 'yes') {
+                return payload;
+            }
+
+            const address = document.getElementById('modalAddress').value.trim();
+            const netmask = document.getElementById('modalNetmask').value.trim();
+            const gateway = document.getElementById('modalGateway').value.trim();
+            const dnsInput = document.getElementById('modalDns').value.trim();
+
+            if (!address) {
+                alert('请输入网络地址');
+                return null;
+            }
+            if (!validateIp(address)) {
+                alert('网络地址格式不正确');
+                return null;
+            }
+            if (!netmask) {
+                alert('请输入子网掩码');
+                return null;
+            }
+
+            const cidr = netmaskToCidr(netmask);
+            if (cidr === null) {
+                alert('子网掩码格式不正确');
+                return null;
+            }
+
+            payload.addresses = [address + '/' + cidr];
+
+            if (gateway) {
+                if (!validateIp(gateway)) {
+                    alert('网关地址格式不正确');
+                    return null;
+                }
+                payload.gateway4 = gateway;
+            }
+
+            if (dnsInput) {
+                const dnsServers = normalizeDnsInput(dnsInput);
+                for (let index = 0; index < dnsServers.length; index += 1) {
+                    if (!validateIp(dnsServers[index])) {
+                        alert('DNS 地址格式不正确');
+                        return null;
+                    }
+                }
+                if (dnsServers.length) {
+                    payload.nameservers = { addresses: dnsServers };
+                }
+            }
+
+            return payload;
+        }
+
+        function setLoadingState(visible) {
+            document.getElementById('loadingOverlay').classList.toggle('show', visible);
+        }
+
+        async function saveInterfaceConfig() {
+            const iface = networkState.editingIface;
+            if (!iface) {
+                return;
+            }
+
+            const payload = {
+                eth0: buildPayloadFromStoredConfig('eth0'),
+                eth1: buildPayloadFromStoredConfig('eth1')
+            };
+
+            const updatedInterfaceConfig = buildPayloadFromModal();
+            if (!updatedInterfaceConfig) {
+                return;
+            }
+            payload[iface] = updatedInterfaceConfig;
+
+            if (!confirm('确定要保存并应用网络配置吗？配置错误可能导致设备暂时无法访问。')) {
+                return;
+            }
+
+            setLoadingState(true);
+
+            try {
+                const response = await axios.post('/api/network/config', { config: payload });
+                if (response.data && response.data.status === 'success') {
+                    networkState.config = normalizeConfig(payload);
+                    closeNetworkModal(true);
+
+                    setTimeout(async () => {
+                        setLoadingState(false);
+                        alert('网络配置已成功应用');
+                        await refreshNetworkPage();
+                    }, 2500);
+                    return;
+                }
+
+                setLoadingState(false);
+                alert('网络配置失败: ' + String((response.data && response.data.message) || '未知错误'));
+            } catch (error) {
+                setLoadingState(false);
+                console.error('保存网络配置失败:', error);
+                alert('保存网络配置失败，请检查网络连接');
+            }
+        }
+    </script>
+</body>
+
+</html>

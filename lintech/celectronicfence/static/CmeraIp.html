@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>通道管理</title>
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="fontawesome-all.min.css">
+    <script src="axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background:
+                radial-gradient(circle at top, rgba(0, 162, 255, 0.18) 0%, rgba(0, 162, 255, 0) 34%),
+                linear-gradient(180deg, #07111f 0%, #0a1628 56%, #09111d 100%);
+            color: #dbe8ff;
+            height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 95%;
+            width: 100%;
+            margin: 0 auto;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        
+        @media (min-width: 1400px) {
+            .container {
+                max-width: 1800px;
+            }
+        }
+
+        /* 头部区域 */
+        .container > .header {
+            background: linear-gradient(90deg, rgba(0, 30, 60, 0.62), rgba(0, 50, 100, 0.45)) !important;
+            padding: 9px 14px !important;
+            border-radius: 8px !important;
+            border: 1px solid rgba(0, 162, 255, 0.35) !important;
+            box-shadow: 0 0 18px rgba(0, 162, 255, 0.22) !important;
+            margin-bottom: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            min-height: 48px;
+        }
+
+        .container > .header .header-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #00d4ff !important;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            line-height: 1.1;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .container > .header .header-title i {
+            color: #00d4ff !important;
+            font-size: 17px;
+        }
+
+        .container > .header .btn-add {
+            padding: 8px 14px !important;
+            border-radius: 7px !important;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            line-height: 1;
+            box-shadow: 0 8px 18px rgba(0, 162, 255, 0.18) !important;
+        }
+
+        .container > .header .btn-add:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 22px rgba(0, 162, 255, 0.22) !important;
+        }
+
+        /* 通道列表 */
+        .channels-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .channels-scroll-area {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .channels-scroll-area::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .channels-scroll-area::-webkit-scrollbar-thumb {
+            background: rgba(0, 162, 255, 0.35);
+            border-radius: 999px;
+        }
+
+        .channels-scroll-area::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .channels-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .channels-table col.col-name {
+            width: 110px;
+        }
+
+        .channels-table col.col-source {
+            width: 32%;
+        }
+
+        .channels-table col.col-assignment {
+            width: 136px;
+        }
+
+        .channels-table col.col-status {
+            width: auto;
+        }
+
+        .channels-table col.col-actions {
+            width: 172px;
+        }
+
+        .channels-table thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .channels-table th {
+            padding: 18px 20px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: inherit;
+        }
+
+        .channels-table tbody tr {
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.2s;
+        }
+
+        .channels-table tbody tr:hover {
+            background: #f8f9ff;
+        }
+
+        .channels-table td {
+            padding: 18px 20px;
+            color: #666;
+        }
+
+        .channel-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 15px;
+        }
+
+        .channel-url {
+            display: block;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #666;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 100%;
+        }
+
+        .channel-resolution {
+            display: inline-block;
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .channel-assignment {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            min-width: 92px;
+            white-space: nowrap;
+            word-break: keep-all;
+            flex-wrap: nowrap;
+        }
+
+        .channel-assignment i {
+            flex-shrink: 0;
+        }
+
+        .channel-assignment.assignment-1 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .channel-assignment.assignment-2 {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        /* 状态标签 */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            max-width: 100%;
+            min-width: 0;
+            vertical-align: middle;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-inactive {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-configured {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-error,
+        .status-invalid {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-checking {
+            background: #e7f3ff;
+            color: #004085;
+        }
+
+        .status-badge i {
+            font-size: 8px;
+            flex-shrink: 0;
+        }
+
+        .status-text {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .status-stack {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            min-width: 0;
+        }
+
+        .status-cell {
+            overflow: hidden;
+        }
+
+        /* 操作按钮 */
+        .action-btns {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+        }
+
+        .action-cell {
+            white-space: nowrap;
+            padding-left: 12px !important;
+            padding-right: 12px !important;
+        }
+
+        .btn-action {
+            border: none;
+            background: transparent;
+            color: #666;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            font-size: 13px;
+            font-weight: 600;
+            min-width: 58px;
+        }
+
+        .btn-edit:hover {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .btn-delete:hover {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        /* 模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            padding: 25px 30px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-title i {
+            color: #667eea;
+        }
+
+        .btn-close {
+            background: transparent;
+            border: none;
+            font-size: 24px;
+            color: #999;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .btn-close:hover {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .modal-footer {
+            padding: 20px 30px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: #999;
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .empty-state i {
+            font-size: 64px;
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+
+        .empty-state h3 {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+            color: #999;
+        }
+
+        /* 协议选择器 */
+        .protocol-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .protocol-btn {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+            color: #666;
+        }
+
+        .protocol-btn.active {
+            border-color: #667eea;
+            background: #f0f4ff;
+            color: #667eea;
+        }
+
+        .protocol-btn:hover {
+            border-color: #667eea;
+        }
+        .container .channels-container {
+            background: linear-gradient(180deg, rgba(10, 20, 34, 0.96), rgba(8, 15, 27, 0.94));
+            border: 1px solid rgba(0, 162, 255, 0.16);
+            box-shadow: 0 18px 36px rgba(2, 8, 20, 0.34);
+        }
+
+        .container .channels-table thead {
+            background: linear-gradient(90deg, rgba(5, 16, 29, 0.98), rgba(8, 26, 46, 0.95));
+            color: #edf6ff;
+        }
+
+        .container .channels-table th {
+            color: #7feaff;
+        }
+
+        .container .channels-table tbody tr {
+            border-bottom: 1px solid rgba(0, 162, 255, 0.1);
+        }
+
+        .container .channels-table tbody tr:hover {
+            background: rgba(0, 162, 255, 0.08);
+        }
+
+        .container .channels-table td {
+            color: #cfe0f7;
+        }
+
+        .container .channel-name {
+            color: #edf6ff;
+        }
+
+        .container .channel-url {
+            color: #8fa9ca;
+        }
+
+        .container .channel-resolution {
+            background: rgba(72, 209, 146, 0.14);
+            color: #b7ffd8;
+            border: 1px solid rgba(72, 209, 146, 0.2);
+        }
+
+        .container .channel-assignment.assignment-1 {
+            background: linear-gradient(180deg, rgba(8, 31, 53, 0.96), rgba(8, 22, 37, 0.98));
+            color: #eef9ff;
+        }
+
+        .container .channel-assignment.assignment-2 {
+            background: linear-gradient(180deg, rgba(63, 34, 18, 0.96), rgba(43, 24, 13, 0.98));
+            color: #ffe9c1;
+        }
+
+        .container .status-active {
+            background: rgba(72, 209, 146, 0.14);
+            color: #b7ffd8;
+        }
+
+        .container .status-inactive {
+            background: rgba(255, 205, 96, 0.14);
+            color: #ffd974;
+        }
+
+        .container .status-configured,
+        .container .status-checking {
+            background: rgba(0, 212, 255, 0.12);
+            color: #d9f6ff;
+        }
+
+        .container .status-error,
+        .container .status-invalid {
+            background: rgba(255, 108, 108, 0.14);
+            color: #ffc1c1;
+        }
+
+        .container .btn-action {
+            background: rgba(8, 20, 34, 0.78);
+            border: 1px solid rgba(0, 162, 255, 0.18);
+            color: #dbe8ff;
+        }
+
+        .container .btn-edit:hover {
+            background: rgba(0, 212, 255, 0.12);
+            color: #dff6ff;
+        }
+
+        .container .btn-delete:hover {
+            background: rgba(255, 108, 108, 0.12);
+            color: #ffcfcf;
+        }
+
+        .modal .modal-content {
+            background: linear-gradient(180deg, rgba(10, 20, 34, 0.98), rgba(8, 15, 27, 0.96));
+            border: 1px solid rgba(0, 162, 255, 0.18);
+            box-shadow: 0 22px 40px rgba(2, 8, 20, 0.42);
+        }
+
+        #channelModal .modal-content {
+            width: min(1120px, calc(100vw - 18px));
+            max-width: none;
+            max-height: calc(100vh - 16px);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        #channelModal .modal-header {
+            padding: 8px 14px !important;
+            background: linear-gradient(180deg, rgba(12, 21, 34, 0.99) 0%, rgba(10, 18, 29, 0.99) 100%) !important;
+            border-bottom: 1px solid rgba(65, 90, 127, 0.18) !important;
+            min-height: 0;
+        }
+
+        #channelModal .modal-title {
+            font-size: 15px !important;
+            gap: 8px;
+            color: #e7eef8 !important;
+        }
+
+        #channelModal .modal-title i {
+            color: #8fb2ff !important;
+            font-size: 15px;
+        }
+
+        #channelModal .btn-close {
+            width: 28px;
+            height: 28px;
+            border-radius: 7px;
+            background: rgba(18, 30, 46, 0.98) !important;
+            border: 1px solid rgba(70, 95, 131, 0.2) !important;
+            color: #9db0c8 !important;
+            font-size: 14px;
+        }
+
+        #channelModal .btn-close:hover {
+            background: rgba(26, 42, 63, 0.99) !important;
+            color: #cfe0ff !important;
+        }
+
+        #channelModal .modal-body {
+            padding: 16px 18px 12px;
+            overflow-y: auto;
+        }
+
+        #channelModal .modal-footer {
+            padding: 10px 18px !important;
+            background: rgba(10, 18, 29, 0.98);
+            border-top: 1px solid rgba(65, 90, 127, 0.18) !important;
+        }
+
+        #channelModal .form-row {
+            gap: 14px;
+            margin-bottom: 12px;
+        }
+
+        #channelModal .form-group {
+            margin-bottom: 12px;
+        }
+
+        #channelModal .form-label {
+            margin-bottom: 6px;
+            font-size: 13px;
+        }
+
+        .modal .modal-header {
+            border-bottom: 1px solid rgba(0, 162, 255, 0.14);
+            background: linear-gradient(90deg, rgba(5, 16, 29, 0.96), rgba(8, 26, 46, 0.92));
+        }
+
+        .modal .modal-title {
+            color: #edf6ff;
+        }
+
+        .modal .modal-title i {
+            color: #00d4ff;
+        }
+
+        .modal .btn-close:hover {
+            background: rgba(0, 212, 255, 0.1);
+            color: #edf6ff;
+        }
+
+        .modal .form-label {
+            color: #dbe8ff;
+        }
+
+        #channelModal .form-control,
+        #channelModal .form-select {
+            background: rgba(10, 13, 18, 0.96);
+            border: 1px solid rgba(122, 136, 158, 0.18);
+            color: #edf4ff;
+            box-shadow: none;
+        }
+
+        #channelModal input.form-control,
+        #channelModal select.form-select,
+        #channelModal textarea.form-control {
+            background: rgba(10, 13, 18, 0.96) !important;
+            border: 1px solid rgba(122, 136, 158, 0.18) !important;
+            color: #edf4ff !important;
+            -webkit-text-fill-color: #edf4ff !important;
+            box-shadow: none !important;
+        }
+
+        #channelModal .form-control:focus,
+        #channelModal .form-select:focus {
+            border-color: rgba(160, 178, 202, 0.24);
+            box-shadow: 0 0 0 2px rgba(94, 106, 126, 0.12);
+            background: rgba(14, 17, 22, 0.98);
+        }
+
+        #channelModal input.form-control:focus,
+        #channelModal select.form-select:focus,
+        #channelModal textarea.form-control:focus {
+            border-color: rgba(160, 178, 202, 0.24) !important;
+            background: rgba(14, 17, 22, 0.98) !important;
+            box-shadow: 0 0 0 2px rgba(94, 106, 126, 0.12) !important;
+        }
+
+        #channelModal .form-control::placeholder {
+            color: #6e86a8;
+        }
+
+        #channelModal input.form-control::placeholder,
+        #channelModal textarea.form-control::placeholder {
+            color: #6e86a8 !important;
+        }
+
+        #channelModal .form-select {
+            color-scheme: dark;
+            background-color: rgba(10, 13, 18, 0.96);
+        }
+
+        #channelModal #channelAssignment {
+            color-scheme: dark;
+            background-color: rgba(10, 13, 18, 0.96) !important;
+            color: #edf4ff !important;
+        }
+
+        #channelModal #channelAssignment option {
+            background: #0d1117;
+            color: #edf4ff;
+        }
+
+        #channelModal #channelAssignment option:checked,
+        #channelModal #channelAssignment option:hover,
+        #channelModal #channelAssignment option:focus {
+            background: #1a1f27;
+            color: #ffffff;
+        }
+
+        #channelModal .protocol-btn {
+            border-color: rgba(122, 136, 158, 0.18);
+            background: rgba(10, 13, 18, 0.96);
+            color: #cfd9e7;
+        }
+
+        #channelModal .protocol-btn.active {
+            border-color: rgba(150, 166, 189, 0.22);
+            background: rgba(14, 17, 22, 0.98);
+            color: #f4f8ff;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+        }
+
+        @media (max-width: 900px) {
+            #channelModal .modal-content {
+                width: min(100%, calc(100vw - 16px));
+            }
+
+            #channelModal .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .container .empty-state i,
+        .container .empty-state h3,
+        .container .empty-state p {
+            color: #8fa9ca;
+        }
+    </style>
+    <link rel="stylesheet" href="pcb-theme.css?v=20260323-black3">
+</head>
+
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <div class="header-title">
+                <i class="fas fa-th-large"></i>
+                通道管理
+            </div>
+            <button class="btn-add" onclick="openAddModal()">
+                <i class="fas fa-plus"></i>
+                新增通道
+            </button>
+        </div>
+
+        <!-- 通道列表 -->
+        <div class="channels-container">
+            <div class="channels-scroll-area">
+                <table class="channels-table">
+                    <colgroup>
+                        <col class="col-name">
+                        <col class="col-source">
+                        <col class="col-assignment">
+                        <col class="col-status">
+                        <col class="col-actions">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>相机编号</th>
+                            <th>视频地址</th>
+                            <th>分配通道</th>
+                            <th>通道状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="channelsTableBody">
+                        <!-- 动态加载 -->
+                    </tbody>
+                </table>
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <i class="fas fa-video-slash"></i>
+                    <h3>暂无通道</h3>
+                    <p>点击右上角"新增通道"按钮添加您的第一个通道</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增/编辑通道模态框 -->
+    <div class="modal" id="channelModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-plus-circle"></i>
+                    <span id="modalTitle">新增通道</span>
+                </div>
+                <button class="btn-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="channelForm">
+                    <div class="form-group full-width">
+                        <label class="form-label">探测协议</label>
+                        <div class="protocol-selector">
+                            <button type="button" class="protocol-btn active" data-protocol="manual">手动填写</button>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">相机编号</label>
+                            <input type="text" class="form-control" id="channelName" placeholder="例如：180度" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">分配给通道</label>
+                            <select class="form-select" id="channelAssignment" required>
+                                <option value="">请选择通道</option>
+                                <option value="1">通道 1 (主通道)</option>
+                                <option value="2">通道 2 (副通道)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label class="form-label">视频地址</label>
+                        <input type="text" class="form-control" id="channelUrl" placeholder="rtsp://admin:ABCD0102@192.168.1.208:554/Streaming/Channels/101" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">相机描述</label>
+                            <input type="text" class="form-control" id="channelDesc" placeholder="例如：前门监控">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">国标28181通道编号</label>
+                            <input type="text" class="form-control" id="channelGb28181" placeholder="例如：34020000001320000001">
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="channelId">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveChannel()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 通道数据
+        let channels = [];
+        let editingChannelId = null;
+
+        // 页面加载时获取通道列表
+        window.onload = function() {
+            loadChannels();
+        };
+
+        // 加载通道列表
+        function loadChannels() {
+            axios.get('/api/channels')
+                .then(response => {
+                    if (response.data.status === 'success') {
+                        channels = response.data.channels || [];
+                        renderChannels();
+                    } else {
+                        console.error('加载通道失败:', response.data.message);
+                        channels = [];
+                        renderChannels();
+                    }
+                })
+                .catch(error => {
+                    console.error('加载通道失败:', error);
+                    channels = [];
+                    renderChannels();
+                });
+        }
+
+        // 渲染通道列表
+        function renderChannels() {
+            const tbody = document.getElementById('channelsTableBody');
+            const emptyState = document.getElementById('emptyState');
+
+            if (channels.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'flex';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            tbody.innerHTML = channels.map(channel => `
+                <tr id="channel-row-${channel.id}">
+                    <td><span class="channel-name">${escapeHtml(channel.name || '-')}</span></td>
+                    <td><span class="channel-url" title="${escapeAttr(channel.url || '')}">${escapeHtml(channel.url || '-')}</span></td>
+                    <td>${getChannelAssignmentBadge(channel.channelAssignment)}</td>
+                    <td class="status-cell">
+                        <div class="status-stack" id="status-${channel.id}">
+                            <span class="status-badge status-checking">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <span class="status-text">检测中...</span>
+                            </span>
+                        </div>
+                    </td>
+                    <td class="action-cell">
+                        <div class="action-btns">
+                            <button class="btn-action btn-edit" onclick="editChannel(${channel.id})" title="编辑">
+                                编辑
+                            </button>
+                            <button class="btn-action btn-delete" onclick="deleteChannel(${channel.id})" title="删除">
+                                删除
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            
+            // 渲染完成后，开始检测每个通道的状态
+            channels.forEach(channel => {
+                checkChannelStatus(channel.id, channel.url);
+            });
+        }
+
+        // 获取通道分配徽章
+        function getChannelAssignmentBadge(assignment) {
+            if (assignment === '1') {
+                return '<span class="channel-assignment assignment-1"><i class="fas fa-video"></i> 通道 1</span>';
+            } else if (assignment === '2') {
+                return '<span class="channel-assignment assignment-2"><i class="fas fa-video"></i> 通道 2</span>';
+            } else {
+                return '<span class="channel-resolution">-</span>';
+            }
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function escapeAttr(value) {
+            return escapeHtml(value);
+        }
+
+        function extractResolutionText(rawValue) {
+            const rawText = String(rawValue || '').trim();
+            if (!rawText) {
+                return '';
+            }
+
+            const match = rawText.match(/(\d{2,5}x\d{2,5})/);
+            return match ? match[1] : '';
+        }
+
+        function formatResolutionText(resolutionText) {
+            return String(resolutionText || '').replace('x', ' x ');
+        }
+
+        function buildStatusMarkup(status, resolution) {
+            const isActive = status === 'active';
+            const resolutionText = isActive ? extractResolutionText(resolution) : '';
+            const statusClass = isActive ? 'status-active' : 'status-error';
+            const statusIcon = isActive ? 'fa-check-circle' : 'fa-exclamation-circle';
+            const statusText = isActive ? '连接成功' : '连接失败';
+            const resolutionMarkup = resolutionText
+                ? `<span class="channel-resolution">${escapeHtml(formatResolutionText(resolutionText))}</span>`
+                : '';
+
+            return `
+                <span class="status-badge ${statusClass}">
+                    <i class="fas ${statusIcon}"></i>
+                    <span class="status-text">${statusText}</span>
+                </span>
+                ${resolutionMarkup}
+            `;
+        }
+
+        // 检测通道状态
+        function checkChannelStatus(channelId, url) {
+            console.log(`开始检测通道 ${channelId}, URL: ${url}`);
+            
+            axios.post('/api/channels/check', { url: url })
+                .then(response => {
+                    console.log(`通道 ${channelId} 检测响应:`, response.data);
+                    
+                    if (response.data.status === 'success') {
+                        const statusElement = document.getElementById(`status-${channelId}`);
+                        if (statusElement) {
+                            const status = response.data.streamStatus;
+                            const resolution = response.data.resolution;
+                            const debug = response.data.debug;
+                            
+                            // 如果有调试信息，输出到控制台
+                            if (debug) {
+                                console.log(`调试信息:`, debug);
+                            }
+                            
+                            const resolutionText = extractResolutionText(resolution);
+                            statusElement.innerHTML = buildStatusMarkup(status, resolutionText);
+                            
+                            // 更新本地数据
+                            const channelIndex = channels.findIndex(c => c.id === channelId);
+                            if (channelIndex !== -1) {
+                                channels[channelIndex].status = status;
+                                channels[channelIndex].resolution = resolutionText;
+                            }
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error(`检测通道 ${channelId} 状态失败:`, error);
+                    const statusElement = document.getElementById(`status-${channelId}`);
+                    if (statusElement) {
+                        statusElement.innerHTML = buildStatusMarkup('error', '');
+                    }
+                });
+        }
+
+        // 获取状态文本
+        function getStatusText(status) {
+            const statusMap = {
+                'active': '连接成功',
+                'inactive': '连接失败',
+                'error': '连接失败',
+                'invalid': '连接失败',
+                'configured': '连接失败'
+            };
+            return statusMap[status] || '连接失败';
+        }
+
+        // 打开新增模态框
+        function openAddModal() {
+            editingChannelId = null;
+            document.getElementById('modalTitle').textContent = '新增通道';
+            document.getElementById('channelForm').reset();
+            document.getElementById('channelId').value = '';
+            document.getElementById('channelModal').classList.add('show');
+        }
+
+        // 编辑通道
+        function editChannel(id) {
+            const channel = channels.find(c => c.id === id);
+            if (!channel) return;
+
+            editingChannelId = id;
+            document.getElementById('modalTitle').textContent = '编辑通道';
+            document.getElementById('channelName').value = channel.name;
+            document.getElementById('channelUrl').value = channel.url;
+            document.getElementById('channelAssignment').value = channel.channelAssignment || '';
+            document.getElementById('channelDesc').value = channel.description || '';
+            document.getElementById('channelGb28181').value = channel.gb28181 || '';
+            document.getElementById('channelId').value = id;
+            document.getElementById('channelModal').classList.add('show');
+        }
+
+        // 关闭模态框
+        function closeModal() {
+            document.getElementById('channelModal').classList.remove('show');
+        }
+
+        // 保存通道
+        function saveChannel() {
+            const name = document.getElementById('channelName').value.trim();
+            const url = document.getElementById('channelUrl').value.trim();
+            const channelAssignment = document.getElementById('channelAssignment').value;
+            const description = document.getElementById('channelDesc').value.trim();
+            const gb28181 = document.getElementById('channelGb28181').value.trim();
+
+            if (!name || !url) {
+                alert('请填写相机编号和视频地址');
+                return;
+            }
+
+            if (!channelAssignment) {
+                alert('请选择分配给哪个通道');
+                return;
+            }
+
+            const channelData = {
+                name,
+                url,
+                channelAssignment,
+                description,
+                gb28181,
+                status: 'configured'
+            };
+
+            if (editingChannelId) {
+                // 编辑模式
+                axios.put(`/api/channels/${editingChannelId}`, channelData)
+                    .then(response => {
+                        if (response.data.status === 'success') {
+                            alert('通道更新成功');
+                            closeModal();
+                            loadChannels();
+                        } else {
+                            alert('通道更新失败: ' + response.data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('更新通道失败:', error);
+                        alert('通道更新失败，请检查网络连接');
+                    });
+            } else {
+                // 新增模式
+                axios.post('/api/channels', channelData)
+                    .then(response => {
+                        if (response.data.status === 'success') {
+                            alert('通道添加成功');
+                            closeModal();
+                            loadChannels();
+                        } else {
+                            alert('通道添加失败: ' + response.data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('添加通道失败:', error);
+                        alert('通道添加失败，请检查网络连接');
+                    });
+            }
+        }
+
+        // 删除通道
+        function deleteChannel(id) {
+            if (!confirm('确定要删除这个通道吗？')) {
+                return;
+            }
+
+            axios.delete(`/api/channels/${id}`)
+                .then(response => {
+                    if (response.data.status === 'success') {
+                        alert('通道删除成功');
+                        loadChannels();
+                    } else {
+                        alert('通道删除失败: ' + response.data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('删除通道失败:', error);
+                    alert('通道删除失败，请检查网络连接');
+                });
+        }
+
+        // 点击模态框外部关闭
+        document.getElementById('channelModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+
+</html>

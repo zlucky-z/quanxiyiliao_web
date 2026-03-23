@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>用户配置页面</title>
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <style>
+        html,
+        body {
+            margin: 0;
+            height: 100%;
+            background-color: #f8f9fa;
+            overflow: hidden;
+        }
+
+        /* 顶部栏样式 */
+      .top-bar {
+            background-color: #343a40;
+            color: #fff;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+      .setting-container {
+            padding: 30px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            margin-top: 0px;
+            height: calc(100% - 60px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 30px;
+        }
+
+      .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            font-weight: bold;
+            color: #555;
+        }
+
+      .input-group {
+            width: 300px;
+        }
+
+      .btn {
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+      .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+
+      .btn-primary:hover {
+            background-color: #0069d9;
+            border-color: #0062cc;
+        }
+
+      .btn-secondary {
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+
+      .btn-secondary:hover {
+            background-color: #5a6268;
+            border-color: #545b62;
+        }
+
+      .btn-container {
+            margin-top: 20px;
+            display: flex;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            padding: 16px;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            background:
+                radial-gradient(circle at top, rgba(0, 162, 255, 0.18) 0%, rgba(0, 162, 255, 0) 34%),
+                linear-gradient(180deg, #07111f 0%, #0a1628 56%, #09111d 100%) !important;
+            color: #dbe8ff;
+        }
+
+        .top-bar {
+            background: linear-gradient(90deg, rgba(5, 16, 29, 0.98), rgba(8, 26, 46, 0.95)) !important;
+            border: 1px solid rgba(0, 162, 255, 0.22);
+            border-radius: 8px;
+            padding: 10px 16px;
+            box-shadow: 0 12px 28px rgba(2, 8, 20, 0.32);
+            min-height: 48px;
+            flex-shrink: 0;
+        }
+
+        body .setting-container {
+            flex: 1;
+            min-height: 0;
+            height: auto;
+            overflow: auto;
+            padding: 26px 28px;
+            background: linear-gradient(180deg, rgba(10, 20, 34, 0.96), rgba(8, 15, 27, 0.94)) !important;
+            border: 1px solid rgba(0, 162, 255, 0.16);
+            border-radius: 12px;
+            box-shadow: 0 18px 36px rgba(2, 8, 20, 0.34);
+        }
+
+        .setting-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .setting-container::-webkit-scrollbar-thumb {
+            background: rgba(0, 212, 255, 0.32);
+            border-radius: 999px;
+        }
+
+        body h1,
+        body label {
+            color: #dbe8ff;
+        }
+
+        body .form-control {
+            background: rgba(5, 10, 25, 0.82);
+            border: 1px solid rgba(0, 162, 255, 0.35);
+            color: #edf6ff;
+            box-shadow: none;
+        }
+
+        body .form-control::placeholder {
+            color: #7f9abf;
+        }
+
+        body .form-control:focus {
+            background: rgba(8, 14, 30, 0.92);
+            border-color: rgba(0, 212, 255, 0.46);
+            color: #edf6ff;
+            box-shadow: 0 0 0 0.18rem rgba(0, 162, 255, 0.18);
+        }
+
+        body .btn {
+            border-radius: 7px;
+            border: 1px solid rgba(0, 162, 255, 0.22);
+            box-shadow: none;
+        }
+
+        body .btn-primary {
+            background: linear-gradient(180deg, rgba(8, 31, 53, 0.96), rgba(8, 22, 37, 0.98)) !important;
+            border-color: rgba(0, 212, 255, 0.28) !important;
+            color: #eef9ff;
+        }
+
+        body .btn-primary:hover {
+            background: linear-gradient(180deg, rgba(9, 37, 62, 0.98), rgba(10, 27, 44, 0.98)) !important;
+            border-color: rgba(0, 212, 255, 0.4) !important;
+        }
+
+        body .btn-secondary {
+            background: rgba(10, 20, 40, 0.82) !important;
+            border-color: rgba(131, 160, 197, 0.22) !important;
+            color: #d7e5fa;
+        }
+
+        body .btn-secondary:hover {
+            background: rgba(16, 29, 52, 0.96) !important;
+            border-color: rgba(131, 160, 197, 0.34) !important;
+            color: #edf6ff;
+        }
+    </style>
+    <link rel="stylesheet" href="pcb-theme.css?v=20260323-black3">
+</head>
+
+<body>
+    <div class="top-bar">
+        <span>用户配置</span>
+        <button class="btn btn-secondary" onclick="window.location.href='index1.html'">返回</button>
+    </div>
+    <div class="setting-container">
+        <form>
+            <div class="form-group">
+                <label for="username">用户名：</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="username" placeholder="输入用户名">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="password">密码：</label>
+                <div class="input-group">
+                    <input type="password" class="form-control" id="password" placeholder="输入密码">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="email">邮箱：</label>
+                <div class="input-group">
+                    <input type="email" class="form-control" id="email" placeholder="输入邮箱地址">
+                </div>
+            </div>
+        </form>
+        <div class="btn-container">
+            <button class="btn btn-primary">保存设置</button>
+        </div>
+    </div>
+</body>
+</html>

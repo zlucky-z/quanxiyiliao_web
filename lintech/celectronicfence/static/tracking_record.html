@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>进出统计</title>
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="css/bootstrap-icons.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            min-height: 100vh;
+            padding: 6px;
+            background:
+                radial-gradient(circle at top, rgba(0, 162, 255, 0.18) 0%, rgba(0, 162, 255, 0) 34%),
+                linear-gradient(180deg, #07111f 0%, #0a1628 56%, #09111d 100%);
+            color: #fff;
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+            overflow: hidden;
+        }
+
+        .page-shell {
+            height: calc(100vh - 12px);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .page-header {
+            background: linear-gradient(90deg, rgba(0, 30, 60, 0.62), rgba(0, 50, 100, 0.45));
+            border: 1px solid rgba(0, 162, 255, 0.35);
+            border-radius: 8px;
+            padding: 9px 14px;
+            box-shadow: 0 0 18px rgba(0, 162, 255, 0.22);
+        }
+
+        .page-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #00d4ff;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .content-wrapper {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-panel {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(135deg, rgba(10, 20, 40, 0.88), rgba(20, 35, 60, 0.68));
+            border: 1px solid rgba(0, 162, 255, 0.32);
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.52);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-panel::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00a2ff, transparent);
+        }
+
+        .toolbar-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(0, 162, 255, 0.22);
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 162, 255, 0.4) rgba(0, 0, 0, 0.25);
+        }
+
+        .toolbar-row::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .toolbar-row::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .toolbar-row::-webkit-scrollbar-thumb {
+            background: rgba(0, 162, 255, 0.45);
+            border-radius: 999px;
+        }
+
+        .title-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(0, 162, 255, 0.35);
+            background: rgba(8, 18, 38, 0.8);
+            font-size: 0.96rem;
+            font-weight: 700;
+            color: #00d4ff;
+            white-space: nowrap;
+        }
+
+        .stats-row {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            white-space: nowrap;
+            font-size: 0.88rem;
+        }
+
+        .stat-item {
+            color: rgba(255, 255, 255, 0.68);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .stat-value {
+            color: #00d4ff;
+            font-weight: 700;
+            font-size: 1.02rem;
+        }
+
+        .filter-toolbar {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+            white-space: nowrap;
+        }
+
+        .btn-group-sm .btn {
+            height: 30px;
+            padding: 0 12px;
+            font-size: 0.8rem;
+            border-radius: 5px;
+        }
+
+        .btn {
+            border: 1px solid rgba(0, 162, 255, 0.25);
+            background: rgba(10, 20, 40, 0.8);
+            color: rgba(255, 255, 255, 0.78);
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: rgba(20, 35, 60, 0.85);
+            border-color: rgba(0, 162, 255, 0.48);
+            color: #fff;
+        }
+
+        .btn-outline-primary {
+            color: rgba(0, 212, 255, 0.9);
+            border-color: rgba(0, 162, 255, 0.45);
+            background: rgba(10, 20, 40, 0.65);
+        }
+
+        .btn-check:checked + .btn-outline-primary {
+            color: rgba(0, 212, 255, 1);
+            border-color: rgba(0, 162, 255, 0.7);
+            background: rgba(0, 162, 255, 0.2);
+            box-shadow: inset 0 0 0 1px rgba(0, 162, 255, 0.2);
+        }
+
+        .btn-success {
+            color: rgba(0, 255, 106, 0.95);
+            border-color: rgba(0, 200, 81, 0.45);
+        }
+
+        .btn-danger {
+            color: rgba(255, 120, 120, 0.95);
+            border-color: rgba(255, 82, 82, 0.45);
+        }
+
+        .btn-secondary {
+            color: rgba(185, 198, 220, 0.95);
+            border-color: rgba(130, 150, 190, 0.45);
+        }
+
+        .btn:disabled {
+            opacity: 0.52;
+            cursor: not-allowed;
+        }
+
+        .form-control, .form-select {
+            height: 30px;
+            min-width: 128px;
+            width: 128px;
+            padding: 2px 8px;
+            border-radius: 5px;
+            background: rgba(5, 10, 25, 0.82);
+            border: 1px solid rgba(0, 162, 255, 0.35);
+            color: #fff;
+            font-size: 0.8rem;
+        }
+
+        .form-control.keyword {
+            width: 180px;
+            min-width: 180px;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #00a2ff;
+            box-shadow: 0 0 8px rgba(0, 162, 255, 0.3);
+            background: rgba(8, 14, 30, 0.92);
+        }
+
+        .form-control::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+
+        .table-wrap {
+            flex: 1;
+            min-height: 0;
+            overflow: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 162, 255, 0.5) rgba(0, 0, 0, 0.2);
+        }
+
+        .table-wrap::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .table-wrap::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .table-wrap::-webkit-scrollbar-thumb {
+            background: rgba(0, 162, 255, 0.5);
+            border-radius: 3px;
+        }
+
+        .table {
+            width: 100%;
+            color: rgba(255, 255, 255, 0.92);
+            font-size: 0.84rem;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .table thead {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: rgba(10, 20, 40, 0.96);
+        }
+
+        .table thead th {
+            padding: 8px 10px;
+            font-weight: 600;
+            color: #00d4ff;
+            border-bottom: 2px solid rgba(0, 162, 255, 0.33);
+            white-space: nowrap;
+            background: rgba(10, 20, 40, 0.96);
+        }
+
+        .table tbody td {
+            padding: 7px 10px;
+            border-bottom: 1px solid rgba(0, 162, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+            background: transparent;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        .table tbody tr:hover td {
+            background: rgba(0, 162, 255, 0.1);
+        }
+
+        .person-cell {
+            max-width: 220px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .task-cell {
+            max-width: 220px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .badge-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            border: 1px solid rgba(0, 162, 255, 0.32);
+            background: rgba(10, 20, 40, 0.68);
+            color: rgba(255, 255, 255, 0.82);
+        }
+
+        .badge-inside {
+            border-color: rgba(0, 200, 81, 0.45);
+            color: rgba(0, 255, 106, 0.95);
+        }
+
+        .badge-outside {
+            border-color: rgba(255, 187, 51, 0.45);
+            color: rgba(255, 218, 121, 0.95);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 24px 0;
+            color: rgba(255, 255, 255, 0.38);
+        }
+
+        .bottom-bar {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(0, 162, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .bottom-meta {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.56);
+        }
+
+        .bottom-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .page-summary {
+            font-size: 0.82rem;
+            color: rgba(255, 255, 255, 0.68);
+        }
+
+        .page-input {
+            min-width: 76px;
+            width: 76px;
+        }
+
+        .toast-wrap {
+            position: fixed;
+            top: 14px;
+            right: 14px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast-item {
+            min-width: 240px;
+            max-width: 360px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            background: rgba(10, 20, 40, 0.96);
+            border: 1px solid rgba(0, 162, 255, 0.45);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+            font-size: 0.84rem;
+            line-height: 1.45;
+        }
+
+        .toast-item.error {
+            border-color: rgba(255, 68, 68, 0.5);
+        }
+
+        .toast-item.warning {
+            border-color: rgba(255, 187, 51, 0.5);
+        }
+
+        @media (max-width: 1024px) {
+            body {
+                overflow: auto;
+            }
+
+            .page-shell {
+                height: auto;
+                min-height: calc(100vh - 12px);
+            }
+
+            .card-panel {
+                min-height: 520px;
+            }
+        }
+
+        /* Final black sync: tracking stats panels, filters, table head and toasts. */
+        html body {
+            background:
+                radial-gradient(circle at top, rgba(118, 128, 146, 0.12) 0%, rgba(118, 128, 146, 0) 32%),
+                linear-gradient(180deg, #050608 0%, #090b0f 56%, #07090c 100%) !important;
+        }
+
+        html body .page-shell > .page-header {
+            background: linear-gradient(180deg, rgba(9, 11, 15, 0.99), rgba(14, 18, 24, 0.96)) !important;
+            border: 1px solid rgba(122, 136, 158, 0.18) !important;
+            box-shadow: 0 16px 30px rgba(0, 0, 0, 0.38) !important;
+        }
+
+        html body .page-shell .card-panel {
+            background: linear-gradient(180deg, rgba(9, 11, 15, 0.98), rgba(13, 17, 23, 0.95)) !important;
+            border: 1px solid rgba(122, 136, 158, 0.14) !important;
+            box-shadow: 0 20px 38px rgba(0, 0, 0, 0.44) !important;
+        }
+
+        html body .page-shell .card-panel::before {
+            background: linear-gradient(90deg, transparent, rgba(156, 170, 192, 0.28), transparent) !important;
+        }
+
+        html body .page-shell .toolbar-row,
+        html body .page-shell .bottom-bar {
+            border-color: rgba(122, 136, 158, 0.12) !important;
+        }
+
+        html body .page-shell .title-chip {
+            background: linear-gradient(180deg, rgba(17, 21, 27, 0.96), rgba(10, 13, 18, 0.97)) !important;
+            border-color: rgba(122, 136, 158, 0.22) !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+        }
+
+        html body .page-shell .btn,
+        html body .page-shell .btn-outline-primary {
+            background: linear-gradient(180deg, rgba(19, 23, 29, 0.97), rgba(10, 13, 18, 0.99)) !important;
+            border-color: rgba(122, 136, 158, 0.18) !important;
+            box-shadow: none !important;
+        }
+
+        html body .page-shell .btn:hover:not(:disabled),
+        html body .page-shell .btn-outline-primary:hover {
+            background: linear-gradient(180deg, rgba(25, 30, 37, 0.98), rgba(14, 17, 22, 0.99)) !important;
+            border-color: rgba(150, 166, 189, 0.24) !important;
+        }
+
+        html body .page-shell .btn-check:checked + .btn-outline-primary {
+            background: linear-gradient(180deg, rgba(25, 30, 37, 0.98), rgba(14, 17, 22, 0.99)) !important;
+            border-color: rgba(160, 178, 202, 0.26) !important;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04) !important;
+        }
+
+        html body .page-shell .btn-success {
+            border-color: rgba(97, 162, 129, 0.22) !important;
+        }
+
+        html body .page-shell .btn-danger {
+            border-color: rgba(182, 101, 101, 0.22) !important;
+        }
+
+        html body .page-shell .form-control,
+        html body .page-shell .form-select {
+            background: rgba(10, 13, 18, 0.92) !important;
+            border-color: rgba(122, 136, 158, 0.18) !important;
+        }
+
+        html body .page-shell .form-control:focus,
+        html body .page-shell .form-select:focus {
+            border-color: rgba(160, 178, 202, 0.24) !important;
+            box-shadow: 0 0 0 3px rgba(94, 106, 126, 0.12) !important;
+            background: rgba(12, 15, 20, 0.96) !important;
+        }
+
+        html body .page-shell .table thead,
+        html body .page-shell .table thead th {
+            background: linear-gradient(180deg, rgba(11, 13, 18, 0.99), rgba(18, 22, 28, 0.97)) !important;
+        }
+
+        html body .page-shell .table thead th {
+            border-bottom: 1px solid rgba(122, 136, 158, 0.2) !important;
+        }
+
+        html body .page-shell .table tbody td {
+            border-bottom-color: rgba(122, 136, 158, 0.08) !important;
+        }
+
+        html body .page-shell .table tbody tr:hover td {
+            background: rgba(255, 255, 255, 0.035) !important;
+        }
+
+        html body .page-shell .badge-chip {
+            background: rgba(17, 21, 27, 0.9) !important;
+            border-color: rgba(122, 136, 158, 0.16) !important;
+        }
+
+        html body .toast-item {
+            background: linear-gradient(180deg, rgba(12, 15, 21, 0.98), rgba(10, 12, 17, 0.97)) !important;
+            border-color: rgba(122, 136, 158, 0.2) !important;
+            box-shadow: 0 16px 30px rgba(0, 0, 0, 0.42) !important;
+        }
+    </style>
+    <link rel="stylesheet" href="pcb-theme.css?v=20260323-black3">
+</head>
+<body>
+    <div class="toast-wrap" id="toastWrap"></div>
+
+    <div class="page-shell">
+        <div class="page-header">
+            <div class="page-title"><i class="bi bi-person-lines-fill"></i> 进出统计</div>
+        </div>
+
+        <div class="content-wrapper">
+            <section class="card-panel">
+                <div class="toolbar-row">
+                    <div class="title-chip">
+                        <i class="bi bi-activity"></i>
+                        登记人员追踪统计记录
+                    </div>
+
+                    <div class="stats-row">
+                        <span class="stat-item">记录数: <span class="stat-value" id="recordCount">0</span></span>
+                        <span class="stat-item">区域内: <span class="stat-value" id="insideCount">0</span></span>
+                        <span class="stat-item">进入: <span class="stat-value" id="entryCount">0</span></span>
+                        <span class="stat-item">离开: <span class="stat-value" id="exitCount">0</span></span>
+                    </div>
+
+                    <div class="filter-toolbar">
+                        <select id="taskFilter" class="form-select" title="任务筛选">
+                            <option value="all">全部任务</option>
+                        </select>
+
+                        <div class="btn-group btn-group-sm" role="group" aria-label="状态筛选">
+                            <input type="radio" class="btn-check" name="statusFilter" id="statusAll" value="all" checked>
+                            <label class="btn btn-outline-primary" for="statusAll">全部</label>
+
+                            <input type="radio" class="btn-check" name="statusFilter" id="statusInside" value="inside">
+                            <label class="btn btn-outline-primary" for="statusInside">区域内</label>
+
+                            <input type="radio" class="btn-check" name="statusFilter" id="statusOutside" value="outside">
+                            <label class="btn btn-outline-primary" for="statusOutside">已离开</label>
+                        </div>
+
+                        <input type="text" class="form-control keyword" id="keywordFilter" placeholder="搜索人员/任务/标签">
+                        <input type="date" class="form-control" id="startDate" title="开始日期">
+                        <input type="date" class="form-control" id="endDate" title="结束日期">
+                        <button class="btn btn-secondary btn-sm" id="clearBtn" type="button" title="重置筛选">
+                            <i class="bi bi-arrow-counterclockwise"></i>重置筛选
+                        </button>
+                        <button class="btn btn-success btn-sm" id="refreshBtn" type="button"><i class="bi bi-arrow-clockwise"></i>刷新</button>
+                    </div>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>任务</th>
+                                <th>视频源</th>
+                                <th>人员</th>
+                                <th>标签</th>
+                                <th>轨迹ID</th>
+                                <th>进入时间</th>
+                                <th>离开时间</th>
+                                <th>当前状态</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recordList">
+                            <tr><td colspan="8" class="empty-state">正在加载统计数据...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="bottom-bar">
+                    <div class="bottom-meta">最近刷新：<span id="lastUpdated">--</span></div>
+                    <div class="bottom-actions">
+                        <span class="page-summary" id="pageSummary">第 1 / 1 页</span>
+                        <input type="number" class="form-control page-input" id="pageJumpInput" min="1" step="1" inputmode="numeric" placeholder="页码" title="输入页码">
+                        <button class="btn btn-secondary btn-sm" id="pageJumpBtn" type="button">跳转</button>
+                        <button class="btn btn-danger btn-sm" id="clearRecordsBtn" type="button" disabled title="请先选择任务">
+                            <i class="bi bi-trash3"></i>清除记录
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const TABLE_COLUMN_COUNT = 8;
+        const DEFAULT_PAGE_SIZE = 20;
+
+        const state = {
+            rows: [],
+            filteredRows: [],
+            taskStatsList: [],
+            taskMap: new Map(),
+            channelMap: new Map(),
+            registeredTaskMap: new Map(),
+            currentPage: 1,
+            totalPages: 1,
+            pageSize: DEFAULT_PAGE_SIZE,
+            filters: {
+                taskId: "all",
+                status: "all",
+                keyword: "",
+                startDate: "",
+                endDate: ""
+            },
+            refreshTimer: null
+        };
+
+        function showToast(message, type = "success") {
+            const wrap = document.getElementById("toastWrap");
+            const item = document.createElement("div");
+            item.className = "toast-item" + (type === "error" ? " error" : type === "warning" ? " warning" : "");
+            item.textContent = message;
+            wrap.appendChild(item);
+            setTimeout(() => {
+                item.style.opacity = "0";
+                item.style.transition = "opacity 0.2s ease";
+                setTimeout(() => item.remove(), 220);
+            }, 2500);
+        }
+
+        async function fetchJson(url, options = {}) {
+            const response = await fetch(url, {
+                ...options,
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(options.headers || {})
+                }
+            });
+            const text = await response.text();
+            let data = {};
+            if (text) {
+                try {
+                    data = JSON.parse(text);
+                } catch (error) {
+                    data = { message: text };
+                }
+            }
+            if (!response.ok) {
+                throw new Error(data.message || text || ("HTTP " + response.status));
+            }
+            return data;
+        }
+
+        function escapeHtml(text) {
+            return String(text || "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        function formatTime(ms) {
+            const ts = Number(ms || 0);
+            if (!Number.isFinite(ts) || ts <= 0) {
+                return "--";
+            }
+            const date = new Date(ts);
+            if (Number.isNaN(date.getTime())) {
+                return "--";
+            }
+            const pad = (num) => String(num).padStart(2, "0");
+            return date.getFullYear() + "-" +
+                pad(date.getMonth() + 1) + "-" +
+                pad(date.getDate()) + " " +
+                pad(date.getHours()) + ":" +
+                pad(date.getMinutes()) + ":" +
+                pad(date.getSeconds());
+        }
+
+        function msToDateText(ms) {
+            const ts = Number(ms || 0);
+            if (!Number.isFinite(ts) || ts <= 0) {
+                return "";
+            }
+            const date = new Date(ts);
+            if (Number.isNaN(date.getTime())) {
+                return "";
+            }
+            const pad = (num) => String(num).padStart(2, "0");
+            return date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate());
+        }
+
+        function normalizeTaskList(taskResponse) {
+            if (!taskResponse || taskResponse.status !== "success" || !Array.isArray(taskResponse.tasks)) {
+                return [];
+            }
+            return taskResponse.tasks;
+        }
+
+        function normalizeStatsTaskList(statsResponse) {
+            if (!statsResponse || statsResponse.status !== "success") {
+                return [];
+            }
+            if (Array.isArray(statsResponse.tasks)) {
+                return statsResponse.tasks;
+            }
+            if (statsResponse.task && typeof statsResponse.task === "object") {
+                return [statsResponse.task];
+            }
+            return [];
+        }
+
+        function normalizeChannelList(channelResponse) {
+            if (!channelResponse || channelResponse.status !== "success" || !Array.isArray(channelResponse.channels)) {
+                return [];
+            }
+            return channelResponse.channels;
+        }
+
+        function buildTaskMaps(tasks) {
+            state.taskMap.clear();
+            state.registeredTaskMap.clear();
+            tasks.forEach((task) => {
+                const taskId = Number(task.id || 0);
+                if (taskId <= 0) {
+                    return;
+                }
+                state.taskMap.set(taskId, task);
+                if (String(task.algorithm || "").trim() === "registered_person_tracking") {
+                    state.registeredTaskMap.set(taskId, task);
+                }
+            });
+        }
+
+        function buildChannelMap(channels) {
+            state.channelMap.clear();
+            channels.forEach((channel) => {
+                const channelId = Number(channel.id || 0);
+                if (channelId > 0) {
+                    state.channelMap.set(channelId, channel);
+                }
+            });
+        }
+
+        function resolveTrackDisplayName(personMap, label, fallbackName) {
+            const normalizedLabel = String(label || "");
+            if (normalizedLabel && personMap.has(normalizedLabel)) {
+                const personMeta = personMap.get(normalizedLabel) || {};
+                if (personMeta.displayName) {
+                    return String(personMeta.displayName);
+                }
+            }
+            return String(fallbackName || normalizedLabel || "未命名");
+        }
+
+        function flattenRows(taskStatsList) {
+            const rows = [];
+            taskStatsList.forEach((taskStats) => {
+                const taskId = Number(taskStats.taskId || 0);
+                const streamChannelId = Number(taskStats.streamChannelId || 0);
+                const persons = Array.isArray(taskStats.persons) ? taskStats.persons : [];
+                const tracks = Array.isArray(taskStats.tracks) ? taskStats.tracks : [];
+                const records = Array.isArray(taskStats.records) ? taskStats.records : [];
+                const taskMeta = state.taskMap.get(taskId) || {};
+                const taskNumber = String(taskMeta.taskNumber || ("任务#" + (taskId > 0 ? taskId : "--")));
+                const taskDescription = String(taskMeta.description || "");
+                const videoSourceId = Number(taskMeta.videoSourceId || 0);
+                const personMap = new Map();
+                persons.forEach((person) => {
+                    const label = String(person.label || "");
+                    if (label) {
+                        personMap.set(label, person);
+                    }
+                });
+
+                records.forEach((record) => {
+                    const label = String(record.label || "");
+                    const displayName = resolveTrackDisplayName(personMap, label, label);
+                    const enterTimeMs = Number(record.enterTimeMs || 0);
+                    const exitTimeMs = Number(record.exitTimeMs || 0);
+                    const lastSeenMs = Number(record.lastSeenMs || exitTimeMs || enterTimeMs || 0);
+                    rows.push({
+                        taskId: taskId,
+                        streamChannelId: streamChannelId,
+                        taskNumber: taskNumber,
+                        taskDescription: taskDescription,
+                        videoSourceId: videoSourceId,
+                        recordId: Number(record.recordId || 0),
+                        trackId: Number(record.trackId || 0),
+                        displayName: displayName,
+                        label: label,
+                        enterTimeMs: enterTimeMs,
+                        exitTimeMs: exitTimeMs,
+                        firstSeenMs: Number(record.firstSeenMs || 0),
+                        lastSeenMs: lastSeenMs,
+                        currentInside: false,
+                        primaryTimeMs: exitTimeMs || lastSeenMs || enterTimeMs || 0
+                    });
+                });
+
+                tracks.forEach((track) => {
+                    if (!track || !track.active || !track.counted) {
+                        return;
+                    }
+                    const label = String(track.confirmedLabel || track.observedLabel || "");
+                    if (!label) {
+                        return;
+                    }
+                    const displayName = resolveTrackDisplayName(
+                        personMap,
+                        label,
+                        track.displayName || track.observedLabel || label
+                    );
+                    const enterTimeMs = Number(
+                        track.enterTimeMs || track.confirmTimeMs || track.firstSeenMs || 0
+                    );
+                    const lastSeenMs = Number(track.lastSeenMs || enterTimeMs || 0);
+                    rows.push({
+                        taskId: taskId,
+                        streamChannelId: streamChannelId,
+                        taskNumber: taskNumber,
+                        taskDescription: taskDescription,
+                        videoSourceId: videoSourceId,
+                        recordId: Number(track.recordId || 0),
+                        trackId: Number(track.trackId || 0),
+                        displayName: displayName,
+                        label: label,
+                        enterTimeMs: enterTimeMs,
+                        exitTimeMs: 0,
+                        firstSeenMs: Number(track.firstSeenMs || 0),
+                        lastSeenMs: lastSeenMs,
+                        currentInside: true,
+                        primaryTimeMs: lastSeenMs || enterTimeMs || 0
+                    });
+                });
+            });
+
+            rows.sort((a, b) => {
+                if (!!b.currentInside !== !!a.currentInside) {
+                    return b.currentInside ? 1 : -1;
+                }
+                if (b.primaryTimeMs !== a.primaryTimeMs) {
+                    return b.primaryTimeMs - a.primaryTimeMs;
+                }
+                return b.recordId - a.recordId;
+            });
+            return rows;
+        }
+
+        function renderTaskFilterOptions() {
+            const select = document.getElementById("taskFilter");
+            const current = state.filters.taskId;
+            const options = [];
+            options.push('<option value="all">全部任务</option>');
+
+            const taskIds = new Set();
+            state.rows.forEach((row) => {
+                if (row.taskId > 0) {
+                    taskIds.add(row.taskId);
+                }
+            });
+            state.registeredTaskMap.forEach((_, taskId) => {
+                taskIds.add(taskId);
+            });
+
+            Array.from(taskIds).sort((a, b) => a - b).forEach((taskId) => {
+                const meta = state.taskMap.get(taskId) || {};
+                const name = String(meta.taskNumber || ("任务#" + taskId));
+                const desc = String(meta.description || "");
+                const text = desc ? (name + " - " + desc) : name;
+                options.push('<option value="' + String(taskId) + '">' + escapeHtml(text) + '</option>');
+            });
+
+            select.innerHTML = options.join("");
+            if (Array.from(select.options).some(opt => opt.value === current)) {
+                select.value = current;
+            } else {
+                state.filters.taskId = "all";
+                select.value = "all";
+            }
+        }
+
+        function updateSummary() {
+            const rows = state.rows;
+            const taskStatsList = state.taskStatsList;
+            let insideCount = 0;
+            let totalEntryCount = 0;
+            let totalExitCount = 0;
+
+            taskStatsList.forEach((taskStats) => {
+                const persons = Array.isArray(taskStats.persons) ? taskStats.persons : [];
+                persons.forEach((person) => {
+                    const entries = Math.max(0, Number(person.entries || 0));
+                    const exits = Math.max(
+                        0,
+                        Number(person.exits !== undefined ? person.exits : (entries - (person.currentInside ? 1 : 0)))
+                    );
+                    if (person.currentInside) {
+                        insideCount += 1;
+                    }
+                    totalEntryCount += entries;
+                    totalExitCount += exits;
+                });
+            });
+
+            document.getElementById("recordCount").textContent = String(rows.length);
+            document.getElementById("insideCount").textContent = String(insideCount);
+            document.getElementById("entryCount").textContent = String(totalEntryCount);
+            document.getElementById("exitCount").textContent = String(totalExitCount);
+        }
+
+        function getSelectedTaskId() {
+            const taskId = Number(state.filters.taskId || 0);
+            return Number.isFinite(taskId) && taskId > 0 ? taskId : 0;
+        }
+
+        function getClearTargetTaskId() {
+            const selectedTaskId = getSelectedTaskId();
+            if (selectedTaskId > 0) {
+                return selectedTaskId;
+            }
+            const registeredTaskIds = Array.from(state.registeredTaskMap.keys())
+                .map((taskId) => Number(taskId || 0))
+                .filter((taskId) => Number.isFinite(taskId) && taskId > 0);
+            return registeredTaskIds.length === 1 ? registeredTaskIds[0] : 0;
+        }
+
+        function getSelectedTaskText(taskId) {
+            const meta = state.taskMap.get(taskId) || {};
+            const taskNumber = String(meta.taskNumber || ("任务#" + taskId));
+            const taskDescription = String(meta.description || "");
+            return taskDescription ? (taskNumber + " - " + taskDescription) : taskNumber;
+        }
+
+        function getVideoSourceText(row) {
+            const videoSourceId = Number(row.videoSourceId || 0);
+            const channel = videoSourceId > 0 ? state.channelMap.get(videoSourceId) : null;
+            if (channel) {
+                const name = String(channel.name || "").trim();
+                const assignment = String(channel.channelAssignment || "").trim();
+                if (name) {
+                    return name;
+                }
+                if (assignment) {
+                    return "通道" + assignment;
+                }
+            }
+            if (videoSourceId > 0) {
+                return "视频源" + videoSourceId;
+            }
+            if (row.streamChannelId) {
+                return "通道" + row.streamChannelId;
+            }
+            return "--";
+        }
+
+        function clampPage(page) {
+            const parsed = Number(page || 1);
+            const normalized = Number.isFinite(parsed) ? Math.floor(parsed) : 1;
+            if (state.totalPages <= 1) {
+                return 1;
+            }
+            if (normalized < 1) {
+                return 1;
+            }
+            if (normalized > state.totalPages) {
+                return state.totalPages;
+            }
+            return normalized;
+        }
+
+        function updateClearRecordsButton() {
+            const clearRecordsBtn = document.getElementById("clearRecordsBtn");
+            const taskId = getClearTargetTaskId();
+            const enabled = taskId > 0;
+            clearRecordsBtn.disabled = !enabled;
+            clearRecordsBtn.title = enabled ? ("清除 " + getSelectedTaskText(taskId) + " 的记录") : "请先选择任务";
+        }
+
+        function renderPagination() {
+            const totalRows = state.filteredRows.length;
+            state.totalPages = Math.max(1, Math.ceil(totalRows / state.pageSize));
+            state.currentPage = totalRows > 0 ? clampPage(state.currentPage) : 1;
+
+            document.getElementById("pageSummary").textContent =
+                "第 " + state.currentPage + " / " + state.totalPages + " 页，共 " + totalRows + " 条";
+            document.getElementById("pageJumpInput").value = String(state.currentPage);
+        }
+
+        function jumpToPage(rawValue) {
+            state.currentPage = clampPage(rawValue);
+            renderTable();
+        }
+
+        function applyFilters(resetPage = true) {
+            const taskIdFilter = state.filters.taskId;
+            const statusFilter = state.filters.status;
+            const keyword = String(state.filters.keyword || "").trim().toLowerCase();
+            const startDate = state.filters.startDate;
+            const endDate = state.filters.endDate;
+
+            state.filteredRows = state.rows.filter((row) => {
+                if (taskIdFilter !== "all" && String(row.taskId) !== taskIdFilter) {
+                    return false;
+                }
+                if (statusFilter === "inside" && !row.currentInside) {
+                    return false;
+                }
+                if (statusFilter === "outside" && row.currentInside) {
+                    return false;
+                }
+                if (keyword) {
+                    const haystack = (
+                        String(row.displayName || "") + " " +
+                        String(row.label || "") + " " +
+                        String(row.trackId || "") + " " +
+                        String(row.taskNumber || "") + " " +
+                        String(row.taskDescription || "")
+                    ).toLowerCase();
+                    if (haystack.indexOf(keyword) < 0) {
+                        return false;
+                    }
+                }
+
+                const dateText = msToDateText(row.primaryTimeMs || row.lastSeenMs || row.enterTimeMs);
+                if (startDate && dateText && dateText < startDate) {
+                    return false;
+                }
+                if (endDate && dateText && dateText > endDate) {
+                    return false;
+                }
+                if ((startDate || endDate) && !dateText) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            if (resetPage) {
+                state.currentPage = 1;
+            }
+            updateClearRecordsButton();
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById("recordList");
+            renderPagination();
+            if (!state.filteredRows.length) {
+                const tip = state.rows.length === 0
+                    ? "暂无登记人员追踪统计数据"
+                    : "暂无符合筛选条件的记录";
+                tbody.innerHTML = '<tr><td colspan="' + TABLE_COLUMN_COUNT + '" class="empty-state">' + escapeHtml(tip) + '</td></tr>';
+                return;
+            }
+
+            const startIndex = (state.currentPage - 1) * state.pageSize;
+            const pageRows = state.filteredRows.slice(startIndex, startIndex + state.pageSize);
+
+            tbody.innerHTML = pageRows.map((row) => {
+                const statusBadge = row.currentInside
+                    ? '<span class="badge-chip badge-inside">区域内</span>'
+                    : '<span class="badge-chip badge-outside">已离开</span>';
+                const taskText = row.taskDescription
+                    ? (row.taskNumber + " - " + row.taskDescription)
+                    : row.taskNumber;
+                const videoSourceText = getVideoSourceText(row);
+
+                return '' +
+                    '<tr>' +
+                        '<td class="task-cell" title="' + escapeHtml(taskText) + '">' + escapeHtml(taskText) + '</td>' +
+                        '<td><span class="badge-chip" title="' + escapeHtml(videoSourceText) + '">' + escapeHtml(videoSourceText) + '</span></td>' +
+                        '<td class="person-cell" title="' + escapeHtml(row.displayName) + '">' + escapeHtml(row.displayName) + '</td>' +
+                        '<td class="person-cell" title="' + escapeHtml(row.label || "--") + '">' + escapeHtml(row.label || "--") + '</td>' +
+                        '<td>' + escapeHtml(row.trackId || "--") + '</td>' +
+                        '<td>' + escapeHtml(formatTime(row.enterTimeMs)) + '</td>' +
+                        '<td>' + escapeHtml(formatTime(row.exitTimeMs)) + '</td>' +
+                        '<td>' + statusBadge + '</td>' +
+                    '</tr>';
+            }).join("");
+        }
+
+        async function clearCurrentTaskRecords() {
+            const taskId = getClearTargetTaskId();
+            if (taskId <= 0) {
+                showToast("请先选择需要清除记录的任务", "warning");
+                return;
+            }
+
+            const taskText = getSelectedTaskText(taskId);
+            const clearRecordsBtn = document.getElementById("clearRecordsBtn");
+            clearRecordsBtn.disabled = true;
+
+            try {
+                await fetchJson("/api/registered-person-tracking/stats?taskId=" + encodeURIComponent(String(taskId)), {
+                    method: "DELETE"
+                });
+                await refreshData(false);
+                showToast(taskText + " 记录已清除");
+            } catch (error) {
+                updateClearRecordsButton();
+                showToast(error.message || "清除记录失败", "error");
+            }
+        }
+
+        async function refreshData(showTip = false) {
+            const tbody = document.getElementById("recordList");
+            tbody.innerHTML = '<tr><td colspan="' + TABLE_COLUMN_COUNT + '" class="empty-state">正在加载统计数据...</td></tr>';
+
+            try {
+                const [tasksResp, channelsResp, statsResp] = await Promise.all([
+                    fetchJson("/api/tasks").catch(() => ({ status: "error", tasks: [] })),
+                    fetchJson("/api/channels").catch(() => ({ status: "error", channels: [] })),
+                    fetchJson("/api/registered-person-tracking/stats")
+                ]);
+
+                const tasks = normalizeTaskList(tasksResp);
+                buildTaskMaps(tasks);
+                const channels = normalizeChannelList(channelsResp);
+                buildChannelMap(channels);
+
+                const taskStatsList = normalizeStatsTaskList(statsResp);
+                state.taskStatsList = taskStatsList;
+                state.rows = flattenRows(taskStatsList);
+
+                updateSummary();
+                renderTaskFilterOptions();
+                applyFilters(true);
+
+                const nowText = formatTime(Date.now());
+                document.getElementById("lastUpdated").textContent = nowText;
+                if (showTip) {
+                    showToast("进出统计已更新");
+                }
+            } catch (error) {
+                state.taskStatsList = [];
+                state.rows = [];
+                state.filteredRows = [];
+                state.channelMap.clear();
+                updateSummary();
+                renderTaskFilterOptions();
+                applyFilters(true);
+                tbody.innerHTML = '<tr><td colspan="' + TABLE_COLUMN_COUNT + '" class="empty-state">加载失败: ' + escapeHtml(error.message || "未知错误") + '</td></tr>';
+                document.getElementById("lastUpdated").textContent = "--";
+                showToast(error.message || "加载统计失败", "error");
+            }
+        }
+
+        function bindEvents() {
+            document.getElementById("taskFilter").addEventListener("change", (event) => {
+                state.filters.taskId = String(event.target.value || "all");
+                applyFilters();
+            });
+
+            document.querySelectorAll('input[name="statusFilter"]').forEach((radio) => {
+                radio.addEventListener("change", (event) => {
+                    state.filters.status = String(event.target.value || "all");
+                    applyFilters();
+                });
+            });
+
+            document.getElementById("keywordFilter").addEventListener("input", (event) => {
+                state.filters.keyword = String(event.target.value || "");
+                applyFilters();
+            });
+
+            document.getElementById("startDate").addEventListener("change", (event) => {
+                state.filters.startDate = String(event.target.value || "");
+                applyFilters();
+            });
+
+            document.getElementById("endDate").addEventListener("change", (event) => {
+                state.filters.endDate = String(event.target.value || "");
+                applyFilters();
+            });
+
+            document.getElementById("clearBtn").addEventListener("click", () => {
+                state.filters.taskId = "all";
+                state.filters.status = "all";
+                state.filters.keyword = "";
+                state.filters.startDate = "";
+                state.filters.endDate = "";
+
+                document.getElementById("taskFilter").value = "all";
+                document.getElementById("statusAll").checked = true;
+                document.getElementById("keywordFilter").value = "";
+                document.getElementById("startDate").value = "";
+                document.getElementById("endDate").value = "";
+                applyFilters(true);
+            });
+
+            document.getElementById("refreshBtn").addEventListener("click", () => {
+                refreshData(true).catch((error) => showToast(error.message || "刷新失败", "error"));
+            });
+
+            document.getElementById("pageJumpBtn").addEventListener("click", () => {
+                jumpToPage(document.getElementById("pageJumpInput").value);
+            });
+
+            document.getElementById("pageJumpInput").addEventListener("keydown", (event) => {
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    jumpToPage(event.target.value);
+                }
+            });
+
+            document.getElementById("clearRecordsBtn").addEventListener("click", () => {
+                clearCurrentTaskRecords().catch((error) => {
+                    updateClearRecordsButton();
+                    showToast(error.message || "清除记录失败", "error");
+                });
+            });
+        }
+
+        async function initializePage() {
+            bindEvents();
+            await refreshData(false);
+            state.refreshTimer = setInterval(() => {
+                refreshData(false).catch(() => {});
+            }, 15000);
+        }
+
+        window.addEventListener("beforeunload", () => {
+            if (state.refreshTimer) {
+                clearInterval(state.refreshTimer);
+                state.refreshTimer = null;
+            }
+        });
+
+        window.addEventListener("DOMContentLoaded", () => {
+            initializePage().catch((error) => {
+                showToast(error.message || "页面初始化失败", "error");
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频预览</title>
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="fontawesome-all.min.css">
+    <link rel="stylesheet" href="css/bootstrap-icons.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            background:
+                radial-gradient(circle at top, rgba(0, 162, 255, 0.18) 0%, rgba(0, 162, 255, 0) 34%),
+                linear-gradient(180deg, #07111f 0%, #0a1628 56%, #09111d 100%);
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+            color: #fff;
+            overflow: hidden;
+            padding: 8px;
+        }
+
+        .page-shell {
+            height: calc(100vh - 16px);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .page-header {
+            background: linear-gradient(90deg, rgba(0, 30, 60, 0.6), rgba(0, 50, 100, 0.4));
+            border: 1px solid rgba(0, 162, 255, 0.3);
+            border-radius: 8px;
+            padding: 10px 20px;
+            box-shadow: 0 0 20px rgba(0, 162, 255, 0.2);
+        }
+
+        .page-shell .page-header {
+            background: linear-gradient(180deg, rgba(8, 16, 29, 0.98), rgba(8, 19, 34, 0.95)) !important;
+            border: 1px solid rgba(0, 162, 255, 0.2) !important;
+            box-shadow: 0 12px 28px rgba(2, 8, 20, 0.32) !important;
+        }
+
+        .page-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #00d4ff;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .content-wrapper {
+            flex: 1;
+            min-height: 0;
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 8px;
+        }
+
+        .card {
+            background: linear-gradient(135deg, rgba(10, 20, 40, 0.85), rgba(20, 35, 60, 0.65));
+            border: 1px solid rgba(0, 162, 255, 0.3);
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .page-shell .card {
+            background: linear-gradient(180deg, rgba(10, 20, 34, 0.96), rgba(8, 15, 27, 0.94)) !important;
+            border: 1px solid rgba(0, 162, 255, 0.18) !important;
+            box-shadow: 0 18px 34px rgba(2, 8, 20, 0.34) !important;
+        }
+
+        .card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00a2ff, transparent);
+        }
+
+        .page-shell .card::before {
+            background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.6), transparent) !important;
+        }
+
+        .card-header {
+            padding: 0 0 8px 0;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 162, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .page-shell .card > .card-header {
+            margin: -10px -10px 12px !important;
+            padding: 10px 14px 11px !important;
+            background: linear-gradient(90deg, rgba(5, 16, 29, 0.98), rgba(8, 26, 46, 0.95)) !important;
+            border-bottom: 1px solid rgba(0, 162, 255, 0.18) !important;
+            box-shadow: inset 0 -1px 0 rgba(0, 212, 255, 0.04);
+        }
+
+        .card-title {
+            margin: 0;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #00d4ff;
+        }
+
+        .page-shell .card-title {
+            color: #00d4ff !important;
+        }
+
+        .card-note {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.75rem;
+        }
+
+        .page-shell .card-note {
+            color: #8fa9ca !important;
+        }
+
+        .video-container {
+            flex: 1;
+            min-height: 0;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #videoPlayer {
+            width: 100%;
+            height: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            display: none;
+            background: #000;
+        }
+
+        .video-placeholder {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+            padding: 20px;
+        }
+
+        .video-placeholder i {
+            font-size: 3.8rem;
+            margin-bottom: 10px;
+            opacity: 0.35;
+            display: block;
+        }
+
+        .video-loading {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #00d4ff;
+            background: rgba(0, 0, 0, 0.45);
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 36px;
+            height: 36px;
+            border: 4px solid rgba(0, 162, 255, 0.3);
+            border-top-color: #00a2ff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .video-info {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(0, 162, 255, 0.2);
+            font-size: 0.85rem;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 6px;
+        }
+
+        .info-label {
+            color: rgba(255, 255, 255, 0.62);
+            flex-shrink: 0;
+        }
+
+        .info-value {
+            color: #00d4ff;
+            font-weight: 600;
+            text-align: right;
+            word-break: break-all;
+        }
+
+        .action-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .action-btn {
+            min-height: 34px;
+            border-radius: 6px;
+            border: 1px solid rgba(0, 162, 255, 0.25);
+            background: rgba(10, 20, 40, 0.8);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover:not(:disabled) {
+            background: rgba(20, 35, 60, 0.8);
+            border-color: rgba(0, 162, 255, 0.4);
+            color: #fff;
+        }
+
+        .action-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .side-tools {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-section {
+            margin-bottom: 10px;
+        }
+
+        .filter-toggle {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .filter-btn {
+            min-height: 30px;
+            border-radius: 6px;
+            border: 1px solid #00a2ff;
+            background: transparent;
+            color: #00d4ff;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .page-shell .filter-btn {
+            border-color: rgba(88, 116, 155, 0.3) !important;
+            background: rgba(11, 23, 39, 0.88) !important;
+            color: #b8cde8 !important;
+        }
+
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: #00a2ff;
+            color: #fff;
+        }
+
+        .page-shell .filter-btn:hover,
+        .page-shell .filter-btn.active {
+            background: linear-gradient(90deg, rgba(0, 84, 136, 0.42), rgba(0, 132, 185, 0.28)) !important;
+            border-color: rgba(0, 212, 255, 0.34) !important;
+            color: #eff9ff !important;
+        }
+
+        .form-control {
+            background: rgba(10, 20, 40, 0.6);
+            border: 1px solid rgba(0, 162, 255, 0.3);
+            color: #fff;
+            padding: 5px 8px;
+            font-size: 0.8rem;
+            border-radius: 4px;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #00a2ff;
+            box-shadow: 0 0 8px rgba(0, 162, 255, 0.3);
+        }
+
+        .refresh-btn {
+            width: 100%;
+            min-height: 30px;
+            border-radius: 6px;
+            border: 1px solid rgba(0, 162, 255, 0.25);
+            background: rgba(10, 20, 40, 0.8);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: rgba(20, 35, 60, 0.8);
+            border-color: rgba(0, 162, 255, 0.4);
+            color: #fff;
+        }
+
+        .file-list {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 162, 255, 0.5) rgba(0, 0, 0, 0.2);
+        }
+
+        .file-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .file-list::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .file-list::-webkit-scrollbar-thumb {
+            background: rgba(0, 162, 255, 0.5);
+            border-radius: 3px;
+        }
+
+        .file-item {
+            background: rgba(0, 162, 255, 0.05);
+            border: 1px solid rgba(0, 162, 255, 0.2);
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .file-item:hover {
+            background: rgba(0, 162, 255, 0.15);
+            border-color: rgba(0, 162, 255, 0.4);
+            transform: translateX(3px);
+        }
+
+        .file-item.active {
+            background: rgba(0, 162, 255, 0.25);
+            border-color: #00a2ff;
+        }
+
+        .file-item-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-item-info {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.62);
+        }
+
+        .channel-badge {
+            display: inline-block;
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            background: linear-gradient(90deg, #00a2ff, #0088dd);
+            color: #fff;
+        }
+
+        .page-shell .channel-badge {
+            background: rgba(0, 212, 255, 0.12) !important;
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            color: #8fe9ff !important;
+        }
+
+        .empty-state {
+            padding: 20px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 18px;
+            right: 18px;
+            z-index: 9999;
+        }
+
+        .toast-item {
+            background: rgba(10, 20, 40, 0.95);
+            border: 1px solid rgba(0, 162, 255, 0.5);
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-bottom: 10px;
+            min-width: 260px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            animation: slide-in 0.25s ease;
+        }
+
+        .toast-item.success { border-color: rgba(0, 200, 81, 0.5); }
+        .toast-item.error { border-color: rgba(255, 68, 68, 0.5); }
+        .toast-item.info { border-color: rgba(0, 162, 255, 0.5); }
+
+        @keyframes slide-in {
+            from {
+                transform: translateX(260px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 1180px) {
+            body {
+                overflow: auto;
+            }
+
+            .page-shell {
+                height: auto;
+                min-height: calc(100vh - 16px);
+            }
+
+            .content-wrapper {
+                grid-template-columns: 1fr;
+            }
+
+            .file-list {
+                min-height: 260px;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .action-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Final black sync: remove the last blue-tinted blocks on the preview page. */
+        html body {
+            background:
+                radial-gradient(circle at top, rgba(118, 128, 146, 0.12) 0%, rgba(118, 128, 146, 0) 32%),
+                linear-gradient(180deg, #050608 0%, #090b0f 56%, #07090c 100%) !important;
+        }
+
+        html body .page-shell > .page-header {
+            background: linear-gradient(180deg, rgba(9, 11, 15, 0.99), rgba(14, 18, 24, 0.96)) !important;
+            border: 1px solid rgba(122, 136, 158, 0.18) !important;
+            box-shadow: 0 16px 30px rgba(0, 0, 0, 0.38) !important;
+        }
+
+        html body .page-shell .card {
+            background: linear-gradient(180deg, rgba(9, 11, 15, 0.98), rgba(13, 17, 23, 0.95)) !important;
+            border: 1px solid rgba(122, 136, 158, 0.14) !important;
+            box-shadow: 0 20px 38px rgba(0, 0, 0, 0.44) !important;
+        }
+
+        html body .page-shell .card::before {
+            background: linear-gradient(90deg, transparent, rgba(156, 170, 192, 0.28), transparent) !important;
+        }
+
+        html body .page-shell .card > .card-header {
+            background: linear-gradient(90deg, rgba(11, 13, 18, 0.99), rgba(18, 22, 28, 0.96)) !important;
+            border-bottom: 1px solid rgba(122, 136, 158, 0.14) !important;
+            box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.03) !important;
+        }
+
+        html body .page-shell .video-info {
+            border-top-color: rgba(122, 136, 158, 0.12) !important;
+        }
+
+        html body .page-shell .action-btn,
+        html body .page-shell .filter-btn,
+        html body .page-shell .refresh-btn {
+            background: linear-gradient(180deg, rgba(19, 23, 29, 0.97), rgba(10, 13, 18, 0.99)) !important;
+            border-color: rgba(122, 136, 158, 0.18) !important;
+            box-shadow: none !important;
+        }
+
+        html body .page-shell .action-btn:hover:not(:disabled),
+        html body .page-shell .filter-btn:hover,
+        html body .page-shell .filter-btn.active,
+        html body .page-shell .refresh-btn:hover {
+            background: linear-gradient(180deg, rgba(25, 30, 37, 0.98), rgba(14, 17, 22, 0.99)) !important;
+            border-color: rgba(150, 166, 189, 0.24) !important;
+        }
+
+        html body .page-shell .form-control {
+            background: rgba(10, 13, 18, 0.92) !important;
+            border-color: rgba(122, 136, 158, 0.18) !important;
+        }
+
+        html body .page-shell .form-control:focus {
+            border-color: rgba(160, 178, 202, 0.24) !important;
+            box-shadow: 0 0 0 3px rgba(94, 106, 126, 0.12) !important;
+            background: rgba(12, 15, 20, 0.96) !important;
+        }
+
+        html body .page-shell .file-item {
+            background: linear-gradient(180deg, rgba(16, 19, 25, 0.96), rgba(10, 13, 18, 0.96)) !important;
+            border-color: rgba(122, 136, 158, 0.14) !important;
+        }
+
+        html body .page-shell .file-item:hover,
+        html body .page-shell .file-item.active {
+            background: linear-gradient(180deg, rgba(23, 27, 34, 0.98), rgba(13, 16, 21, 0.98)) !important;
+            border-color: rgba(150, 166, 189, 0.22) !important;
+        }
+
+        html body .page-shell .channel-badge {
+            background: rgba(20, 24, 31, 0.94) !important;
+            border: 1px solid rgba(122, 136, 158, 0.22) !important;
+        }
+
+        html body .toast-item {
+            background: linear-gradient(180deg, rgba(12, 15, 21, 0.98), rgba(10, 12, 17, 0.97)) !important;
+            border-color: rgba(122, 136, 158, 0.2) !important;
+            box-shadow: 0 16px 30px rgba(0, 0, 0, 0.42) !important;
+        }
+    </style>
+    <link rel="stylesheet" href="pcb-theme.css?v=20260323-black3">
+</head>
+<body>
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="page-shell">
+        <div class="page-header">
+            <div class="page-title"><i class="bi bi-play-circle"></i> 视频预览</div>
+        </div>
+
+        <div class="content-wrapper">
+            <section class="card">
+                <div class="card-header">
+                    <h5 class="card-title"><i class="bi bi-camera-video"></i> 视频播放器</h5>
+                </div>
+
+                <div class="video-container" id="videoContainer">
+                    <div class="video-placeholder" id="placeholder">
+                        <i class="bi bi-film"></i>
+                        <p>请从右侧列表选择要播放的视频文件</p>
+                    </div>
+                    <video id="videoPlayer" controls preload="metadata">您的浏览器不支持视频播放</video>
+                    <div id="videoLoading" class="video-loading">
+                        <div>
+                            <div class="spinner"></div>
+                            <div>正在加载视频...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="video-info">
+                    <div class="info-row">
+                        <span class="info-label">当前播放</span>
+                        <span class="info-value" id="currentFileName">未选择</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">文件大小</span>
+                        <span class="info-value" id="currentFileSize">--</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">录制时间</span>
+                        <span class="info-value" id="currentFileTime">--</span>
+                    </div>
+                    <div class="action-row">
+                        <button class="action-btn" id="downloadBtn" disabled><i class="bi bi-download"></i> 下载</button>
+                        <button class="action-btn" id="newWindowBtn" disabled><i class="bi bi-box-arrow-up-right"></i> 新窗口</button>
+                        <button class="action-btn" id="fullscreenBtn" disabled><i class="bi bi-arrows-fullscreen"></i> 全屏</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <h5 class="card-title"><i class="bi bi-list-ul"></i> 视频文件</h5>
+                    <div class="card-note"><span id="fileCountLabel">0</span> 个可播放文件</div>
+                </div>
+
+                <div class="side-tools">
+                    <div class="filter-section">
+                        <div class="filter-toggle">
+                            <button class="filter-btn active" id="filterAllBtn" type="button">全部</button>
+                            <button class="filter-btn" id="filterV1Btn" type="button">通道1</button>
+                            <button class="filter-btn" id="filterV2Btn" type="button">通道2</button>
+                        </div>
+                        <input class="form-control" id="dateFilter" type="date">
+                        <button class="refresh-btn" id="refreshFilesBtn"><i class="bi bi-arrow-clockwise"></i> 刷新列表</button>
+                    </div>
+
+                    <div class="file-list" id="fileList">
+                        <div class="empty-state">正在加载文件列表...</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const state = {
+            allFiles: [],
+            currentFilter: "all",
+            dateFilter: "",
+            currentFile: null
+        };
+
+        const videoExtensions = [".mp4", ".avi", ".mkv", ".mov", ".m4v", ".flv", ".wmv", ".webm", ".3gp"];
+
+        function escapeHtml(value) {
+            return String(value || "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        async function requestJson(url, options = {}) {
+            const response = await fetch(url, {
+                ...options,
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(options.headers || {})
+                }
+            });
+            const text = await response.text();
+            let payload = {};
+            if (text) {
+                try {
+                    payload = JSON.parse(text);
+                } catch (error) {
+                    payload = { message: text };
+                }
+            }
+            if (!response.ok) {
+                throw new Error(payload.message || text || ("HTTP " + response.status));
+            }
+            return payload;
+        }
+
+        function showToast(message, type = "success") {
+            const container = document.getElementById("toastContainer");
+            const item = document.createElement("div");
+            item.className = "toast-item " + type;
+            item.textContent = message;
+            container.appendChild(item);
+            window.setTimeout(() => {
+                item.style.animation = "slide-in 0.2s ease reverse";
+                window.setTimeout(() => item.remove(), 200);
+            }, 2500);
+        }
+
+        function buildPreviewUrl(relativePath, download) {
+            const cleanPath = String(relativePath || "").replace(/^\/+/, "");
+            if (!cleanPath) {
+                return "#";
+            }
+            const encodedPath = cleanPath.split("/").map(encodeURIComponent).join("/");
+            const base = "/api/recording/preview/" + encodedPath;
+            return download ? base + "?download=1" : base;
+        }
+
+        function setDefaultPlaceholder() {
+            const placeholder = document.getElementById("placeholder");
+            placeholder.innerHTML =
+                '<i class="bi bi-film"></i>' +
+                '<p>请从右侧列表选择要播放的视频文件</p>';
+        }
+
+        function updateSelectionInfo(file) {
+            document.getElementById("currentFileName").textContent = file ? (file.name || "未选择") : "未选择";
+            document.getElementById("currentFileSize").textContent = file ? (file.sizeStr || "--") : "--";
+            document.getElementById("currentFileTime").textContent = file ? (file.timeStr || "--") : "--";
+            document.getElementById("downloadBtn").disabled = !file;
+            document.getElementById("newWindowBtn").disabled = !file;
+            document.getElementById("fullscreenBtn").disabled = !file;
+        }
+
+        function getFilteredFiles() {
+            return state.allFiles.filter((file) => {
+                if (file.isRecording) {
+                    return false;
+                }
+                const name = String(file.name || "").toLowerCase();
+                const dotPos = name.lastIndexOf(".");
+                const ext = dotPos >= 0 ? name.slice(dotPos) : "";
+                if (videoExtensions.indexOf(ext) < 0) {
+                    return false;
+                }
+                if (state.currentFilter !== "all" && file.channel !== state.currentFilter) {
+                    return false;
+                }
+                if (state.dateFilter) {
+                    return String(file.timeStr || "").slice(0, 10) === state.dateFilter;
+                }
+                return true;
+            });
+        }
+
+        function renderFiles() {
+            const filteredFiles = getFilteredFiles();
+            const listEl = document.getElementById("fileList");
+            document.getElementById("fileCountLabel").textContent = filteredFiles.length;
+
+            if (!filteredFiles.length) {
+                listEl.innerHTML = '<div class="empty-state">当前筛选条件下没有可播放文件</div>';
+                return;
+            }
+
+            listEl.innerHTML = filteredFiles.map((file) => {
+                const active = state.currentFile && state.currentFile.relativePath === file.relativePath ? " active" : "";
+                const encodedPath = encodeURIComponent(file.relativePath || "");
+                return "" +
+                    '<div class="file-item' + active + '" onclick="playVideoByEncodedPath(\'' + encodedPath + '\')">' +
+                        '<div class="file-item-name" title="' + escapeHtml(file.name) + '">' + escapeHtml(file.name) + "</div>" +
+                        '<div class="file-item-info"><span class="channel-badge">' + escapeHtml(file.channel) + "</span><span>" + escapeHtml(file.sizeStr) + "</span></div>" +
+                        '<div class="file-item-info"><span>' + escapeHtml(file.timeStr) + "</span></div>" +
+                    "</div>";
+            }).join("");
+        }
+
+        async function refreshFiles(silent = true) {
+            try {
+                const response = await requestJson("/api/recording/files");
+                state.allFiles = Array.isArray(response.files) ? response.files : [];
+                renderFiles();
+
+                const params = new URLSearchParams(window.location.search);
+                const requestedFile = params.get("file");
+                if (requestedFile) {
+                    const target = state.allFiles.find((item) => item.relativePath === requestedFile && !item.isRecording);
+                    if (target) {
+                        playVideo(target, true);
+                    } else if (!silent) {
+                        showToast("指定文件暂不可播放或不存在", "error");
+                    }
+                }
+
+                if (!silent) {
+                    showToast("文件列表已更新", "success");
+                }
+            } catch (error) {
+                document.getElementById("fileList").innerHTML = '<div class="empty-state">加载文件列表失败</div>';
+                if (!silent) {
+                    showToast("加载文件列表失败: " + error.message, "error");
+                }
+            }
+        }
+
+        function playVideoByEncodedPath(encodedPath) {
+            const relativePath = decodeURIComponent(String(encodedPath || ""));
+            const target = state.allFiles.find((item) => item.relativePath === relativePath);
+            if (!target) {
+                showToast("文件不存在或尚未稳定落盘", "error");
+                return;
+            }
+            playVideo(target, false);
+        }
+
+        function playVideo(file, silent) {
+            state.currentFile = file;
+            renderFiles();
+            updateSelectionInfo(file);
+
+            const player = document.getElementById("videoPlayer");
+            const placeholder = document.getElementById("placeholder");
+            const loading = document.getElementById("videoLoading");
+
+            setDefaultPlaceholder();
+            placeholder.style.display = "none";
+            player.style.display = "none";
+            loading.style.display = "flex";
+
+            player.src = buildPreviewUrl(file.relativePath, false);
+            player.load();
+
+            player.onloadedmetadata = () => {
+                loading.style.display = "none";
+                player.style.display = "block";
+                player.play().catch(() => {});
+            };
+
+            player.onerror = () => {
+                loading.style.display = "none";
+                player.style.display = "none";
+                placeholder.style.display = "block";
+                placeholder.innerHTML =
+                    '<i class="bi bi-exclamation-triangle" style="color:#ff7777;"></i>' +
+                    "<p>视频加载失败，请检查文件是否完整</p>";
+                showToast("视频加载失败", "error");
+            };
+
+            if (!silent) {
+                showToast("开始播放: " + file.name, "success");
+            }
+        }
+
+        function setFilter(filterName) {
+            state.currentFilter = filterName;
+            document.getElementById("filterAllBtn").classList.toggle("active", filterName === "all");
+            document.getElementById("filterV1Btn").classList.toggle("active", filterName === "videos1");
+            document.getElementById("filterV2Btn").classList.toggle("active", filterName === "videos2");
+            renderFiles();
+        }
+
+        function applyDateFilter() {
+            state.dateFilter = document.getElementById("dateFilter").value || "";
+            renderFiles();
+        }
+
+        function downloadCurrent() {
+            if (!state.currentFile) {
+                return;
+            }
+            const link = document.createElement("a");
+            link.href = buildPreviewUrl(state.currentFile.relativePath, true);
+            link.download = state.currentFile.name;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            showToast("开始下载: " + state.currentFile.name, "success");
+        }
+
+        function openInNewWindow() {
+            if (!state.currentFile) {
+                return;
+            }
+            window.open("video_preview.html?file=" + encodeURIComponent(state.currentFile.relativePath), "_blank");
+        }
+
+        function fullscreenVideo() {
+            const player = document.getElementById("videoPlayer");
+            if (player.requestFullscreen) {
+                player.requestFullscreen();
+            } else if (player.webkitRequestFullscreen) {
+                player.webkitRequestFullscreen();
+            } else if (player.msRequestFullscreen) {
+                player.msRequestFullscreen();
+            }
+        }
+
+        function bindEvents() {
+            document.getElementById("filterAllBtn").addEventListener("click", () => setFilter("all"));
+            document.getElementById("filterV1Btn").addEventListener("click", () => setFilter("videos1"));
+            document.getElementById("filterV2Btn").addEventListener("click", () => setFilter("videos2"));
+            document.getElementById("dateFilter").addEventListener("change", applyDateFilter);
+            document.getElementById("refreshFilesBtn").addEventListener("click", () => refreshFiles(false));
+            document.getElementById("downloadBtn").addEventListener("click", downloadCurrent);
+            document.getElementById("newWindowBtn").addEventListener("click", openInNewWindow);
+            document.getElementById("fullscreenBtn").addEventListener("click", fullscreenVideo);
+
+            document.addEventListener("keydown", (event) => {
+                const player = document.getElementById("videoPlayer");
+                if (!state.currentFile || player.style.display === "none") {
+                    return;
+                }
+
+                if (event.key === " ") {
+                    event.preventDefault();
+                    if (player.paused) {
+                        player.play().catch(() => {});
+                    } else {
+                        player.pause();
+                    }
+                } else if (event.key === "ArrowLeft") {
+                    event.preventDefault();
+                    player.currentTime = Math.max(0, player.currentTime - 5);
+                } else if (event.key === "ArrowRight") {
+                    event.preventDefault();
+                    const duration = Number.isFinite(player.duration) ? player.duration : player.currentTime + 5;
+                    player.currentTime = Math.min(duration, player.currentTime + 5);
+                } else if (event.key === "f" || event.key === "F") {
+                    event.preventDefault();
+                    fullscreenVideo();
+                }
+            });
+        }
+
+        async function initializePage() {
+            setDefaultPlaceholder();
+            bindEvents();
+            updateSelectionInfo(null);
+            await refreshFiles(true);
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            initializePage().catch((error) => showToast(error.message, "error"));
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频录制</title>
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="fontawesome-all.min.css">
+    <link rel="stylesheet" href="css/bootstrap-icons.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            min-height: 100vh;
+            padding: 8px;
+            background:
+                radial-gradient(circle at top, rgba(0, 162, 255, 0.18) 0%, rgba(0, 162, 255, 0) 34%),
+                linear-gradient(180deg, #07111f 0%, #0a1628 56%, #09111d 100%);
+            color: #fff;
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+            overflow: hidden;
+        }
+
+        .page-shell {
+            height: calc(100vh - 16px);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .page-header {
+            background: linear-gradient(90deg, rgba(0, 30, 60, 0.6), rgba(0, 50, 100, 0.4));
+            border: 1px solid rgba(0, 162, 255, 0.3);
+            border-radius: 8px;
+            padding: 10px 20px;
+            box-shadow: 0 0 20px rgba(0, 162, 255, 0.2);
+        }
+
+        .page-shell .page-header {
+            background: linear-gradient(180deg, rgba(8, 16, 29, 0.98), rgba(8, 19, 34, 0.95)) !important;
+            border: 1px solid rgba(0, 162, 255, 0.2) !important;
+            box-shadow: 0 12px 28px rgba(2, 8, 20, 0.32) !important;
+        }
+
+        .page-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #00d4ff;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .content-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-height: 0;
+        }
+
+        .top-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            height: 320px;
+        }
+
+        .bottom-section {
+            flex: 1;
+            min-height: 0;
+        }
+
+        .card-panel {
+            background: linear-gradient(135deg, rgba(10, 20, 40, 0.85), rgba(20, 35, 60, 0.65));
+            border: 1px solid rgba(0, 162, 255, 0.3);
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-shell .card-panel {
+            background: linear-gradient(180deg, rgba(10, 20, 34, 0.96), rgba(8, 15, 27, 0.94)) !important;
+            border: 1px solid rgba(0, 162, 255, 0.18) !important;
+            box-shadow: 0 18px 34px rgba(2, 8, 20, 0.34) !important;
+        }
+
+        .card-panel::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00a2ff, transparent);
+        }
+
+        .page-shell .card-panel::before {
+            background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.6), transparent) !important;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 6px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(0, 162, 255, 0.2);
+        }
+
+        .page-shell .card-panel > .card-header {
+            margin: -10px -10px 12px !important;
+            padding: 10px 14px 11px !important;
+            background: linear-gradient(90deg, rgba(5, 16, 29, 0.98), rgba(8, 26, 46, 0.95)) !important;
+            border-bottom: 1px solid rgba(0, 162, 255, 0.18) !important;
+            box-shadow: inset 0 -1px 0 rgba(0, 212, 255, 0.04);
+        }
+
+        .card-title {
+            margin: 0;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #00d4ff;
+        }
+
+        .page-shell .card-title {
+            color: #00d4ff !important;
+        }
+
+        .card-note {
+            color: rgba(255, 255, 255, 0.55);
+            font-size: 0.75rem;
+        }
+
+        .page-shell .card-note {
+            color: #8fa9ca !important;
+        }
+
+        .status-box-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .status-box {
+            background: rgba(0, 162, 255, 0.08);
+            border: 1px solid rgba(0, 162, 255, 0.25);
+            border-radius: 6px;
+            min-height: 110px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 6px 8px;
+        }
+
+        .status-label {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 4px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 62px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-running {
+            background: linear-gradient(90deg, #ff4444, #ff6666);
+        }
+
+        .status-stopped {
+            background: rgba(100, 100, 100, 0.65);
+        }
+
+        .recording-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            margin-right: 6px;
+            border-radius: 50%;
+            background: #fff;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50%, 100% { opacity: 1; }
+            25%, 75% { opacity: 0.35; }
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .control-btn {
+            min-height: 42px;
+            border: 1px solid rgba(0, 162, 255, 0.25);
+            border-radius: 6px;
+            background: rgba(10, 20, 40, 0.8);
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 0.8rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover:not(:disabled) {
+            background: rgba(20, 35, 60, 0.8);
+            border-color: rgba(0, 162, 255, 0.4);
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .config-form {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            flex: 1;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 2px;
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .form-control, .form-select {
+            width: 100%;
+            height: 24px;
+            padding: 2px 5px;
+            background: rgba(5, 10, 25, 0.8);
+            border: 1px solid rgba(0, 162, 255, 0.3);
+            border-radius: 4px;
+            color: #fff;
+            font-size: 0.7rem;
+            outline: none;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #00a2ff;
+            box-shadow: 0 0 8px rgba(0, 162, 255, 0.3);
+        }
+
+        .compact-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .save-btn {
+            margin-top: auto;
+            min-height: 26px;
+        }
+
+        .storage-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            margin-bottom: 10px;
+        }
+
+        .storage-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            font-size: 0.85rem;
+        }
+
+        .storage-label {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .storage-value {
+            color: #00d4ff;
+            font-weight: 600;
+        }
+
+        .progress {
+            height: 16px;
+            margin-top: 8px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(0, 162, 255, 0.2);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            transition: width 0.25s ease;
+        }
+
+        .bg-success {
+            background: linear-gradient(90deg, #00c851, #00ff6a);
+        }
+
+        .bg-warning {
+            background: linear-gradient(90deg, #ffbb33, #ff8800);
+        }
+
+        .bg-danger {
+            background: linear-gradient(90deg, #ff4444, #cc0000);
+        }
+
+        .file-card {
+            height: 100%;
+        }
+
+        .table-wrap {
+            flex: 1;
+            min-height: 0;
+            overflow: auto;
+        }
+
+        .table {
+            width: 100%;
+            color: rgba(255, 255, 255, 0.92);
+            font-size: 0.85rem;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .table thead {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: rgba(10, 20, 40, 0.96);
+        }
+
+        .table th {
+            padding: 8px 10px;
+            color: #00d4ff;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-bottom: 2px solid rgba(0, 162, 255, 0.3);
+            background: rgba(10, 20, 40, 0.96);
+        }
+
+        .table td {
+            padding: 6px 10px;
+            border-bottom: 1px solid rgba(0, 162, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+            background: transparent;
+        }
+
+        .table tbody tr:hover td {
+            background: rgba(0, 162, 255, 0.08);
+        }
+
+        .badge-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            border: 1px solid rgba(0, 162, 255, 0.3);
+            background: rgba(10, 20, 40, 0.6);
+        }
+
+        .row-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .row-btn {
+            min-width: 42px;
+            height: 28px;
+            border: 1px solid rgba(0, 162, 255, 0.25);
+            border-radius: 6px;
+            background: rgba(10, 20, 40, 0.8);
+            color: rgba(255, 255, 255, 0.8);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            font-size: 0.76rem;
+        }
+
+        .row-btn:hover:not(:disabled) {
+            background: rgba(20, 35, 60, 0.8);
+        }
+
+        .mini-link-btn {
+            height: 24px;
+            padding: 0 10px;
+            border: 1px solid rgba(0, 162, 255, 0.22);
+            border-radius: 999px;
+            background: rgba(10, 20, 40, 0.55);
+            color: rgba(255, 255, 255, 0.72);
+            font-size: 0.72rem;
+            transition: all 0.2s ease;
+        }
+
+        .page-shell .mini-link-btn {
+            background: rgba(11, 23, 39, 0.9) !important;
+            border-color: rgba(88, 116, 155, 0.26) !important;
+            color: #dbe8ff !important;
+        }
+
+        .mini-link-btn:hover {
+            background: rgba(20, 35, 60, 0.78);
+            color: #fff;
+            border-color: rgba(0, 162, 255, 0.4);
+        }
+
+        .address-tools {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .address-note {
+            margin-top: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.82rem;
+            line-height: 1.7;
+        }
+
+        .row-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .empty-state {
+            padding: 26px 0;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.35);
+        }
+
+        .toast-wrap {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast-item {
+            min-width: 280px;
+            max-width: 360px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: rgba(8, 18, 36, 0.96);
+            border: 1px solid rgba(0, 162, 255, 0.34);
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
+            font-size: 0.9rem;
+        }
+
+        .toast-item.error {
+            border-color: rgba(255, 68, 68, 0.45);
+        }
+
+        .modal-mask {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.78);
+            padding: 18px;
+        }
+
+        .modal-card {
+            width: min(920px, 100%);
+            max-height: 84vh;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(135deg, rgba(10, 20, 40, 0.96), rgba(20, 35, 60, 0.96));
+            border: 1px solid rgba(0, 162, 255, 0.34);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 18px;
+            border-bottom: 1px solid rgba(0, 162, 255, 0.18);
+        }
+
+        .modal-title {
+            font-size: 1.05rem;
+            color: #00d4ff;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            width: 34px;
+            height: 34px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            font-size: 1rem;
+        }
+
+        .modal-body {
+            padding: 16px 18px;
+            overflow: auto;
+        }
+
+        .diag-section {
+            margin-bottom: 16px;
+            padding: 14px;
+            border-radius: 8px;
+            background: rgba(0, 162, 255, 0.05);
+            border: 1px solid rgba(0, 162, 255, 0.16);
+        }
+
+        .diag-title {
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(0, 162, 255, 0.16);
+            font-size: 0.95rem;
+            color: #00d4ff;
+            font-weight: 600;
+        }
+
+        .diag-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 4px 0;
+            font-size: 0.84rem;
+        }
+
+        .diag-key {
+            color: rgba(255, 255, 255, 0.72);
+        }
+
+        .diag-value {
+            color: #fff;
+            text-align: right;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .diag-ok {
+            color: #00c851;
+        }
+
+        .diag-error {
+            color: #ff7070;
+        }
+
+        .diag-log {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.45);
+            border: 1px solid rgba(0, 162, 255, 0.14);
+            color: #9cffc2;
+            font-family: monospace;
+            font-size: 0.76rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        @media (max-width: 1180px) {
+            body {
+                overflow: auto;
+            }
+
+            .page-shell {
+                height: auto;
+                min-height: calc(100vh - 16px);
+            }
+
+            .top-section,
+            .bottom-section {
+                display: block;
+                height: auto;
+            }
+
+            .top-section {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .bottom-section {
+                min-height: 360px;
+            }
+        }
+        body {
+            padding: 20px;
+        }
+
+        .page-shell {
+            max-width: 95%;
+            width: 100%;
+            margin: 0 auto;
+            height: calc(100vh - 40px);
+        }
+
+        @media (min-width: 1400px) {
+            .page-shell {
+                max-width: 1800px;
+            }
+        }
+
+        .page-header {
+            padding: 9px 14px !important;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+        }
+
+        .page-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .page-shell .card-panel {
+            border-radius: 12px !important;
+        }
+
+        .page-shell .card-panel > .card-header {
+            margin: -10px -10px 14px !important;
+            padding: 11px 14px !important;
+        }
+
+        .status-box {
+            background: rgba(8, 20, 34, 0.78);
+            border-color: rgba(0, 162, 255, 0.16);
+        }
+
+        .status-label {
+            color: #8fa9ca;
+        }
+
+        .status-running {
+            background: rgba(72, 209, 146, 0.14);
+            color: #b7ffd8;
+            border: 1px solid rgba(72, 209, 146, 0.22);
+        }
+
+        .status-stopped {
+            background: rgba(255, 108, 108, 0.12);
+            color: #ffc1c1;
+            border: 1px solid rgba(255, 108, 108, 0.18);
+        }
+
+        .control-btn,
+        .page-shell .mini-link-btn {
+            border: 1px solid rgba(0, 162, 255, 0.18) !important;
+            background: rgba(8, 20, 34, 0.82) !important;
+            color: #dbe8ff !important;
+            box-shadow: none !important;
+        }
+
+        .control-btn:hover:not(:disabled),
+        .page-shell .mini-link-btn:hover {
+            border-color: rgba(0, 212, 255, 0.3) !important;
+            background: rgba(10, 28, 47, 0.92) !important;
+            color: #eef8ff !important;
+        }
+
+        .save-btn {
+            background: linear-gradient(180deg, rgba(8, 31, 53, 0.96), rgba(8, 22, 37, 0.98)) !important;
+            border-color: rgba(0, 212, 255, 0.28) !important;
+            color: #eef9ff !important;
+        }
+
+        .form-control,
+        .form-select {
+            background: rgba(5, 10, 25, 0.82) !important;
+            border: 1px solid rgba(0, 162, 255, 0.28) !important;
+            color: #edf6ff !important;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: rgba(0, 212, 255, 0.42) !important;
+            box-shadow: 0 0 0 3px rgba(0, 162, 255, 0.14) !important;
+            background: rgba(8, 14, 30, 0.92) !important;
+        }
+
+        .progress {
+            background: rgba(5, 10, 25, 0.62);
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, rgba(8, 34, 57, 0.98), rgba(0, 212, 255, 0.72)) !important;
+        }
+
+        .modal-content {
+            background: linear-gradient(180deg, rgba(10, 20, 34, 0.98), rgba(8, 15, 27, 0.96)) !important;
+            border: 1px solid rgba(0, 162, 255, 0.18) !important;
+            box-shadow: 0 22px 40px rgba(2, 8, 20, 0.42) !important;
+        }
+
+        .modal-header {
+            background: linear-gradient(90deg, rgba(5, 16, 29, 0.96), rgba(8, 26, 46, 0.92)) !important;
+            border-bottom: 1px solid rgba(0, 162, 255, 0.14) !important;
+        }
+
+        /* Final black sync: neutralize remaining blue surfaces on the recording page. */
+        html body {
+            background:
+                radial-gradient(circle at top, rgba(118, 128, 146, 0.12) 0%, rgba(118, 128, 146, 0) 32%),
+                linear-gradient(180deg, #050608 0%, #090b0f 56%, #07090c 100%) !important;
+        }
+
+        html body .page-shell > .page-header {
+            background: linear-gradient(180deg, rgba(9, 11, 15, 0.99), rgba(14, 18, 24, 0.96)) !important;
+            border: 1px solid rgba(122, 136, 158, 0.18) !important;
+            box-shadow: 0 16px 30px rgba(0, 0, 0, 0.38) !important;
+        }
+
+        html body .page-shell .card-panel {
+            background: linear-gradient(180deg, rgba(9, 11, 15, 0.98), rgba(13, 17, 23, 0.95)) !important;
+            border: 1px solid rgba(122, 136, 158, 0.14) !important;
+            box-shadow: 0 20px 38px rgba(0, 0, 0, 0.44) !important;
+        }
+
+        html body .page-shell .card-panel::before {
+            background: linear-gradient(90deg, transparent, rgba(156, 170, 192, 0.28), transparent) !important;
+        }
+
+        html body .page-shell .card-panel > .card-header {
+            background: linear-gradient(90deg, rgba(11, 13, 18, 0.99), rgba(18, 22, 28, 0.96)) !important;
+            border-bottom: 1px solid rgba(122, 136, 158, 0.14) !important;
+            box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.03) !important;
+        }
+
+        html body .page-shell .status-box {
+            background: linear-gradient(180deg, rgba(16, 19, 25, 0.96), rgba(10, 13, 18, 0.96)) !important;
+            border: 1px solid rgba(122, 136, 158, 0.14) !important;
+        }
+
+        html body .page-shell .control-btn,
+        html body .page-shell .row-btn,
+        html body .page-shell .mini-link-btn,
+        html body .page-shell .save-btn {
+            background: linear-gradient(180deg, rgba(19, 23, 29, 0.97), rgba(10, 13, 18, 0.99)) !important;
+            border-color: rgba(122, 136, 158, 0.18) !important;
+            box-shadow: none !important;
+        }
+
+        html body .page-shell .control-btn:hover:not(:disabled),
+        html body .page-shell .row-btn:hover:not(:disabled),
+        html body .page-shell .mini-link-btn:hover,
+        html body .page-shell .save-btn:hover:not(:disabled) {
+            background: linear-gradient(180deg, rgba(25, 30, 37, 0.98), rgba(14, 17, 22, 0.99)) !important;
+            border-color: rgba(150, 166, 189, 0.24) !important;
+        }
+
+        html body .page-shell .form-control,
+        html body .page-shell .form-select {
+            background: rgba(10, 13, 18, 0.92) !important;
+            border-color: rgba(122, 136, 158, 0.18) !important;
+        }
+
+        html body .page-shell .form-control:focus,
+        html body .page-shell .form-select:focus {
+            background: rgba(12, 15, 20, 0.96) !important;
+            border-color: rgba(160, 178, 202, 0.24) !important;
+            box-shadow: 0 0 0 3px rgba(94, 106, 126, 0.12) !important;
+        }
+
+        html body .page-shell .table thead,
+        html body .page-shell .table th {
+            background: linear-gradient(180deg, rgba(11, 13, 18, 0.99), rgba(18, 22, 28, 0.97)) !important;
+        }
+
+        html body .page-shell .table th {
+            border-bottom: 1px solid rgba(122, 136, 158, 0.2) !important;
+        }
+
+        html body .page-shell .table td {
+            border-bottom-color: rgba(122, 136, 158, 0.08) !important;
+        }
+
+        html body .page-shell .table tbody tr:hover td {
+            background: rgba(255, 255, 255, 0.035) !important;
+        }
+
+        html body .toast-item,
+        html body .modal-card {
+            background: linear-gradient(180deg, rgba(12, 15, 21, 0.98), rgba(10, 12, 17, 0.97)) !important;
+            border-color: rgba(122, 136, 158, 0.2) !important;
+            box-shadow: 0 16px 30px rgba(0, 0, 0, 0.42) !important;
+        }
+
+        html body .modal-header {
+            background: linear-gradient(90deg, rgba(11, 13, 18, 0.99), rgba(18, 22, 28, 0.96)) !important;
+            border-bottom: 1px solid rgba(122, 136, 158, 0.14) !important;
+        }
+
+        html body #defaultModal .modal-header {
+            background: linear-gradient(180deg, rgba(9, 11, 15, 0.99), rgba(14, 18, 24, 0.96)) !important;
+            border-bottom: 1px solid rgba(122, 136, 158, 0.14) !important;
+        }
+    </style>
+    <link rel="stylesheet" href="pcb-theme.css?v=20260323-black3">
+</head>
+<body>
+    <div class="toast-wrap" id="toastWrap"></div>
+
+    <div class="modal-mask" id="diagModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title"><i class="bi bi-bug"></i> 录制功能诊断</div>
+                <button class="modal-close" id="closeDiagBtn" type="button">×</button>
+            </div>
+            <div class="modal-body" id="diagBody"></div>
+        </div>
+    </div>
+
+    <div class="modal-mask" id="defaultModal">
+        <div class="modal-card" style="width: min(560px, 100%);">
+            <div class="modal-header">
+                <div class="modal-title"><i class="bi bi-pin-angle"></i> 初始化地址工具</div>
+                <button class="modal-close" id="closeDefaultBtn" type="button">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="address-tools">
+                    <button class="control-btn" id="setInitialBtn"><i class="bi bi-pin-angle-fill"></i> 设为初始值</button>
+                    <button class="control-btn" id="restoreInitialBtn"><i class="bi bi-arrow-counterclockwise"></i> 恢复初始值</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-shell">
+        <div class="page-header">
+            <div class="page-title"><i class="bi bi-record-circle"></i> 视频录制管理</div>
+        </div>
+
+        <div class="content-wrapper">
+            <div class="top-section">
+                <section class="card-panel">
+                    <div class="card-header">
+                        <h5 class="card-title"><i class="bi bi-play-circle"></i> 录制控制</h5>
+                    </div>
+
+                    <div class="status-box-row">
+                        <div class="status-box">
+                            <div class="status-label">第一路状态</div>
+                            <div id="status1"><span class="status-badge status-stopped">已停止</span></div>
+                        </div>
+                        <div class="status-box">
+                            <div class="status-label">第二路状态</div>
+                            <div id="status2"><span class="status-badge status-stopped">已停止</span></div>
+                        </div>
+                    </div>
+
+                    <div class="button-grid">
+                        <button class="control-btn" id="startBtn"><i class="bi bi-play-fill"></i> 开始</button>
+                        <button class="control-btn" id="stopBtn"><i class="bi bi-stop-fill"></i> 停止</button>
+                        <button class="control-btn" id="refreshBtn"><i class="bi bi-arrow-clockwise"></i> 刷新</button>
+                        <button class="control-btn" id="diagBtn"><i class="bi bi-bug"></i> 诊断</button>
+                    </div>
+                </section>
+
+                <section class="card-panel">
+                    <div class="card-header">
+                        <h5 class="card-title"><i class="bi bi-sliders"></i> 录制配置</h5>
+                        <button class="mini-link-btn" id="defaultActionsBtn" type="button">初值工具</button>
+                    </div>
+
+                    <div class="config-form">
+                        <div>
+                            <label class="form-label" for="rtspUrl1">RTSP地址1</label>
+                            <input class="form-control" id="rtspUrl1" type="text" placeholder="rtsp://...">
+                        </div>
+                        <div>
+                            <label class="form-label" for="savePath1">保存路径1</label>
+                            <input class="form-control" id="savePath1" type="text" placeholder="/mnt/tfcard/videos1">
+                        </div>
+                        <div>
+                            <label class="form-label" for="rtspUrl2">RTSP地址2</label>
+                            <input class="form-control" id="rtspUrl2" type="text" placeholder="rtsp://...">
+                        </div>
+                        <div>
+                            <label class="form-label" for="savePath2">保存路径2</label>
+                            <input class="form-control" id="savePath2" type="text" placeholder="/mnt/tfcard/videos2">
+                        </div>
+                        <div class="compact-grid">
+                            <div>
+                                <label class="form-label" for="segmentTime">分段时间（秒）</label>
+                                <input class="form-control" id="segmentTime" type="number" min="60" max="86400" step="60" value="600">
+                            </div>
+                            <div>
+                                <label class="form-label" for="recordMode">录制模式</label>
+                                <select class="form-select" id="recordMode">
+                                    <option value="dual">双路录制</option>
+                                    <option value="single">单路录制</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button class="control-btn save-btn" id="saveBtn"><i class="bi bi-save"></i> 保存配置</button>
+                    </div>
+                </section>
+
+                <section class="card-panel">
+                    <div class="card-header">
+                        <h5 class="card-title"><i class="bi bi-sd-card"></i> 存储状态</h5>
+                    </div>
+
+                    <div class="storage-info">
+                        <div class="storage-item">
+                            <span class="storage-label">总容量</span>
+                            <span class="storage-value" id="tfTotal">--</span>
+                        </div>
+                        <div class="storage-item">
+                            <span class="storage-label">已使用</span>
+                            <span class="storage-value" id="tfUsed">--</span>
+                        </div>
+                        <div class="storage-item">
+                            <span class="storage-label">剩余</span>
+                            <span class="storage-value" id="tfFree">--</span>
+                        </div>
+                    </div>
+
+                    <div class="progress">
+                        <div class="progress-bar bg-success" id="tfProgress" style="width: 0%">0%</div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="bottom-section">
+                <section class="card-panel file-card">
+                    <div class="card-header">
+                        <h5 class="card-title"><i class="bi bi-file-earmark-play"></i> 视频文件列表</h5>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>文件名</th>
+                                    <th>通道</th>
+                                    <th>大小</th>
+                                    <th>录制时间</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fileList">
+                                <tr>
+                                    <td colspan="6" class="empty-state">正在加载文件列表...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const state = {
+            files: [],
+            statusTimer: null,
+            filesTimer: null
+        };
+
+        function isDualModeEnabled() {
+            return document.getElementById("recordMode").value !== "single";
+        }
+
+        function updateRecordModeUI() {
+            const dualEnabled = isDualModeEnabled();
+            const rtspUrl2 = document.getElementById("rtspUrl2");
+            const savePath2 = document.getElementById("savePath2");
+
+            rtspUrl2.disabled = !dualEnabled;
+            savePath2.disabled = !dualEnabled;
+
+            if (!dualEnabled) {
+                rtspUrl2.placeholder = "单路模式下不启用第二路";
+                savePath2.placeholder = "单路模式下不启用第二路";
+            } else {
+                rtspUrl2.placeholder = "rtsp://...";
+                savePath2.placeholder = "/mnt/tfcard/videos2";
+            }
+        }
+
+        function showToast(message, type = "success") {
+            const wrap = document.getElementById("toastWrap");
+            const item = document.createElement("div");
+            item.className = "toast-item" + (type === "error" ? " error" : "");
+            item.textContent = message;
+            wrap.appendChild(item);
+            setTimeout(() => {
+                item.style.opacity = "0";
+                setTimeout(() => item.remove(), 180);
+            }, 2600);
+        }
+
+        async function fetchJson(url, options = {}) {
+            const response = await fetch(url, {
+                ...options,
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(options.headers || {})
+                }
+            });
+            const text = await response.text();
+            let data = {};
+            if (text) {
+                try {
+                    data = JSON.parse(text);
+                } catch (error) {
+                    data = { message: text };
+                }
+            }
+            if (!response.ok) {
+                throw new Error(data.message || text || ("HTTP " + response.status));
+            }
+            return data;
+        }
+
+        function getConfigPayload() {
+            const dualEnabled = isDualModeEnabled();
+            return {
+                rtsp_url_1: document.getElementById("rtspUrl1").value.trim(),
+                rtsp_url_2: document.getElementById("rtspUrl2").value.trim(),
+                save_path_1: document.getElementById("savePath1").value.trim(),
+                save_path_2: document.getElementById("savePath2").value.trim(),
+                segment_time: Number(document.getElementById("segmentTime").value || 600),
+                dual_stream_enabled: dualEnabled
+            };
+        }
+
+        function getLegacyAddressPayload() {
+            return {
+                rtspStreamUrl: document.getElementById("rtspUrl1").value.trim(),
+                rtspStreamUrl2: document.getElementById("rtspUrl2").value.trim(),
+                saveLocation: document.getElementById("savePath1").value.trim(),
+                saveLocation2: document.getElementById("savePath2").value.trim()
+            };
+        }
+
+        function updateStatusBadge(targetId, isRecording) {
+            const target = document.getElementById(targetId);
+            if (isRecording) {
+                target.innerHTML = '<span class="status-badge status-running"><span class="recording-indicator"></span>录制中</span>';
+            } else {
+                target.innerHTML = '<span class="status-badge status-stopped">已停止</span>';
+            }
+        }
+
+        function updateStorage(tfcard) {
+            const total = tfcard && tfcard.totalSpace ? tfcard.totalSpace : "--";
+            const used = tfcard && tfcard.usedSpace ? tfcard.usedSpace : "--";
+            const free = tfcard && tfcard.freeSpace ? tfcard.freeSpace : "--";
+            const percent = tfcard && tfcard.usagePercent ? parseInt(String(tfcard.usagePercent).replace("%", ""), 10) : 0;
+
+            document.getElementById("tfTotal").textContent = total;
+            document.getElementById("tfUsed").textContent = used;
+            document.getElementById("tfFree").textContent = free;
+
+            const progressBar = document.getElementById("tfProgress");
+            const safePercent = Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : 0;
+            progressBar.style.width = safePercent + "%";
+            progressBar.textContent = safePercent + "%";
+            progressBar.className = "progress-bar";
+            if (safePercent > 90) {
+                progressBar.classList.add("bg-danger");
+            } else if (safePercent > 75) {
+                progressBar.classList.add("bg-warning");
+            } else {
+                progressBar.classList.add("bg-success");
+            }
+        }
+
+        async function loadConfig() {
+            const response = await fetchJson("/api/recording/config");
+            const config = response.config || {};
+            document.getElementById("rtspUrl1").value = config.rtsp_url_1 || "";
+            document.getElementById("rtspUrl2").value = config.rtsp_url_2 || "";
+            document.getElementById("savePath1").value = config.save_path_1 || "";
+            document.getElementById("savePath2").value = config.save_path_2 || "";
+            document.getElementById("segmentTime").value = config.segment_time || 600;
+            document.getElementById("recordMode").value = config.dual_stream_enabled === false ? "single" : "dual";
+            updateRecordModeUI();
+        }
+
+        async function saveConfig() {
+            const payload = getConfigPayload();
+            if (!payload.rtsp_url_1 || !payload.save_path_1) {
+                showToast("请先填写第一路录制配置。", "error");
+                return;
+            }
+            if (payload.dual_stream_enabled && (!payload.rtsp_url_2 || !payload.save_path_2)) {
+                showToast("双路录制需要填写第二路配置。", "error");
+                return;
+            }
+
+            await fetchJson("/api/recording/config", {
+                method: "POST",
+                body: JSON.stringify(payload)
+            });
+            showToast("配置已保存");
+        }
+
+        async function setInitialAddresses() {
+            const payload = getLegacyAddressPayload();
+            if (!payload.rtspStreamUrl || !payload.saveLocation) {
+                showToast("请先填写第一路地址和保存路径。", "error");
+                return;
+            }
+            if (isDualModeEnabled() && (!payload.rtspStreamUrl2 || !payload.saveLocation2)) {
+                showToast("双路模式下请填写第二路地址和保存路径。", "error");
+                return;
+            }
+
+            const response = await fetchJson("/set_default_addresses", {
+                method: "POST",
+                body: JSON.stringify(payload)
+            });
+            showToast(response.message || "初始化地址已更新");
+            closeDefaultModal();
+        }
+
+        async function restoreInitialAddresses() {
+            const response = await fetchJson("/init_default_addresses", {
+                method: "POST",
+                body: "{}"
+            });
+            await loadConfig();
+            showToast(response.message || "已恢复初始化地址");
+            closeDefaultModal();
+        }
+
+        async function startRecording() {
+            const payload = getConfigPayload();
+            if (!payload.rtsp_url_1 || !payload.save_path_1) {
+                showToast("请先填写第一路录制配置。", "error");
+                return;
+            }
+            if (payload.dual_stream_enabled && (!payload.rtsp_url_2 || !payload.save_path_2)) {
+                showToast("双路录制需要填写第二路配置。", "error");
+                return;
+            }
+
+            const response = await fetchJson("/api/recording/start", {
+                method: "POST",
+                body: JSON.stringify(payload)
+            });
+            showToast(response.message || "录制已启动");
+            await refreshStatus();
+            setTimeout(refreshFiles, 2000);
+        }
+
+        async function stopRecording() {
+            showToast("正在停止录制...", "success");
+            const response = await fetchJson("/api/recording/stop", { method: "POST" });
+            showToast(response.message || "录制已停止");
+            await refreshStatus();
+            await refreshFiles();
+        }
+
+        async function refreshStatus() {
+            const response = await fetchJson("/api/recording/status");
+            const status = response.status || {};
+            updateStatusBadge("status1", !!status.recording1);
+            updateStatusBadge("status2", !!status.recording2);
+            updateStorage(status.tfcard || {});
+            document.getElementById("startBtn").disabled = !!status.recording1 || !!status.recording2;
+        }
+
+        function previewFile(relativePath) {
+            if (window.parent && window.parent !== window && typeof window.parent.openRecordingPreview === "function") {
+                window.parent.openRecordingPreview(relativePath);
+                return;
+            }
+            window.open("video_preview.html?file=" + encodeURIComponent(relativePath), "_blank");
+        }
+
+        async function deleteFile(relativePath, fileName) {
+            if (!window.confirm("确定要删除文件 " + fileName + " 吗？")) {
+                return;
+            }
+
+            const response = await fetchJson("/api/recording/files/delete", {
+                method: "POST",
+                body: JSON.stringify({ relativePath })
+            });
+            showToast(response.message || "文件已删除");
+            await refreshFiles();
+        }
+
+        async function refreshFiles() {
+            const response = await fetchJson("/api/recording/files");
+            state.files = Array.isArray(response.files) ? response.files : [];
+
+            const tbody = document.getElementById("fileList");
+            if (!state.files.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-state">暂无文件</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = state.files.map((file) => {
+                const previewDisabled = file.isRecording ? "disabled" : "";
+                const deleteButton = file.isRecording
+                    ? ""
+                    : '<button class="row-btn" onclick="deleteFile(\'' + file.relativePath.replace(/'/g, "\\'") + '\', \'' + file.name.replace(/'/g, "\\'") + '\')"><i class="bi bi-trash"></i></button>';
+
+                return '' +
+                    '<tr>' +
+                        '<td>' + file.name + '</td>' +
+                        '<td><span class="badge-chip">' + file.channel + '</span></td>' +
+                        '<td>' + file.sizeStr + '</td>' +
+                        '<td>' + file.timeStr + '</td>' +
+                        '<td>' + (file.isRecording
+                            ? '<span class="badge-chip">录制中</span>'
+                            : '<span class="badge-chip">已完成</span>') + '</td>' +
+                        '<td>' +
+                            '<div class="row-actions">' +
+                                '<button class="row-btn" ' + previewDisabled + ' onclick="previewFile(\'' + file.relativePath.replace(/'/g, "\\'") + '\')"><i class="bi bi-play"></i></button>' +
+                                deleteButton +
+                            '</div>' +
+                        '</td>' +
+                    '</tr>';
+            }).join("");
+        }
+
+        function renderDiagnosisSection(title, items, logText) {
+            const rows = items.map((item) => {
+                const extraClass = item.ok === true ? " diag-ok" : item.ok === false ? " diag-error" : "";
+                return '' +
+                    '<div class="diag-item">' +
+                        '<span class="diag-key">' + item.label + '</span>' +
+                        '<span class="diag-value' + extraClass + '">' + item.value + '</span>' +
+                    '</div>';
+            }).join("");
+
+            return '' +
+                '<div class="diag-section">' +
+                    '<div class="diag-title">' + title + '</div>' +
+                    rows +
+                    (logText ? '<div class="diag-log">' + logText + '</div>' : '') +
+                '</div>';
+        }
+
+        async function showDiagnosis() {
+            const response = await fetchJson("/api/recording/diagnose");
+            const diag = response.diagnosis || {};
+            const html = [
+                renderDiagnosisSection("录制目录", [
+                    { label: "第一路路径", value: (diag.path1 && diag.path1.path) || "-", ok: !!(diag.path1 && diag.path1.exists) },
+                    { label: "第一路可写", value: diag.path1 && diag.path1.writable ? "可写" : "不可写", ok: !!(diag.path1 && diag.path1.writable) },
+                    { label: "第一路文件数", value: String(diag.path1 && diag.path1.video_count || 0) },
+                    { label: "第二路路径", value: (diag.path2 && diag.path2.path) || "-", ok: !!(diag.path2 && diag.path2.exists) },
+                    { label: "第二路可写", value: diag.path2 && diag.path2.writable ? "可写" : "不可写", ok: !!(diag.path2 && diag.path2.writable) },
+                    { label: "第二路文件数", value: String(diag.path2 && diag.path2.video_count || 0) }
+                ]),
+                renderDiagnosisSection("录制进程", [
+                    { label: "第一路状态", value: diag.recording_status && diag.recording_status.recording1 ? "运行中" : "未运行", ok: !!(diag.recording_status && diag.recording_status.recording1) },
+                    { label: "第一路PID", value: diag.recording_status && diag.recording_status.pid1_exists ? String(diag.recording_status.pid1 || "-") : "不存在" },
+                    { label: "第二路状态", value: diag.recording_status && diag.recording_status.recording2 ? "运行中" : "未运行", ok: !!(diag.recording_status && diag.recording_status.recording2) },
+                    { label: "第二路PID", value: diag.recording_status && diag.recording_status.pid2_exists ? String(diag.recording_status.pid2 || "-") : "不存在" }
+                ]),
+                renderDiagnosisSection("ffmpeg日志", [], "[channel1]\\n" + ((diag.ffmpeg_logs && diag.ffmpeg_logs.log1_tail) || "暂无日志") + "\\n\\n[channel2]\\n" + ((diag.ffmpeg_logs && diag.ffmpeg_logs.log2_tail) || "暂无日志"))
+            ];
+
+            document.getElementById("diagBody").innerHTML = html.join("");
+            document.getElementById("diagModal").style.display = "flex";
+        }
+
+        function closeDiagnosis() {
+            document.getElementById("diagModal").style.display = "none";
+        }
+
+        function openDefaultModal() {
+            document.getElementById("defaultModal").style.display = "flex";
+        }
+
+        function closeDefaultModal() {
+            document.getElementById("defaultModal").style.display = "none";
+        }
+
+        function bindEvents() {
+            document.getElementById("startBtn").addEventListener("click", () => startRecording().catch((error) => showToast(error.message, "error")));
+            document.getElementById("stopBtn").addEventListener("click", () => stopRecording().catch((error) => showToast(error.message, "error")));
+            document.getElementById("recordMode").addEventListener("change", updateRecordModeUI);
+            document.getElementById("refreshBtn").addEventListener("click", async () => {
+                try {
+                    await refreshStatus();
+                    await refreshFiles();
+                    showToast("状态已刷新");
+                } catch (error) {
+                    showToast(error.message, "error");
+                }
+            });
+            document.getElementById("diagBtn").addEventListener("click", () => showDiagnosis().catch((error) => showToast(error.message, "error")));
+            document.getElementById("saveBtn").addEventListener("click", () => saveConfig().catch((error) => showToast(error.message, "error")));
+            document.getElementById("closeDiagBtn").addEventListener("click", closeDiagnosis);
+            document.getElementById("defaultActionsBtn").addEventListener("click", openDefaultModal);
+            document.getElementById("setInitialBtn").addEventListener("click", () => setInitialAddresses().catch((error) => showToast(error.message, "error")));
+            document.getElementById("restoreInitialBtn").addEventListener("click", () => restoreInitialAddresses().catch((error) => showToast(error.message, "error")));
+            document.getElementById("closeDefaultBtn").addEventListener("click", closeDefaultModal);
+            document.getElementById("diagModal").addEventListener("click", (event) => {
+                if (event.target.id === "diagModal") {
+                    closeDiagnosis();
+                }
+            });
+            document.getElementById("defaultModal").addEventListener("click", (event) => {
+                if (event.target.id === "defaultModal") {
+                    closeDefaultModal();
+                }
+            });
+        }
+
+        async function initializePage() {
+            bindEvents();
+            updateRecordModeUI();
+            await loadConfig();
+            await refreshStatus();
+            await refreshFiles();
+
+            state.statusTimer = setInterval(() => refreshStatus().catch(() => {}), 3000);
+            state.filesTimer = setInterval(() => refreshFiles().catch(() => {}), 10000);
+        }
+
+        window.addEventListener("beforeunload", () => {
+            if (state.statusTimer) clearInterval(state.statusTimer);
+            if (state.filesTimer) clearInterval(state.filesTimer);
+        });
+
+        window.addEventListener("DOMContentLoaded", () => {
+            initializePage().catch((error) => showToast(error.message, "error"));
+        });
+    </script>
+</body>
+</html>

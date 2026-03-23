@@ -1,0 +1,2097 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>告警管理</title>
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="fontawesome-all.min.css">
+    <script src="axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background:
+                radial-gradient(circle at top, rgba(0, 162, 255, 0.18) 0%, rgba(0, 162, 255, 0) 34%),
+                linear-gradient(180deg, #07111f 0%, #0a1628 56%, #09111d 100%);
+            color: #dbe8ff;
+            height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 95%;
+            width: 100%;
+            margin: 0 auto;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        
+        @media (min-width: 1400px) {
+            .container {
+                max-width: 1800px;
+            }
+        }
+
+        /* 头部区域 */
+        .container > .header {
+            background: linear-gradient(90deg, rgba(0, 30, 60, 0.62), rgba(0, 50, 100, 0.45)) !important;
+            padding: 9px 14px !important;
+            border-radius: 8px !important;
+            border: 1px solid rgba(0, 162, 255, 0.35) !important;
+            box-shadow: 0 0 18px rgba(0, 162, 255, 0.22) !important;
+            margin-bottom: 16px;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+        }
+
+        .container > .header .header-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #00d4ff !important;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            line-height: 1.1;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .container > .header .header-title i {
+            color: #00d4ff !important;
+            font-size: 17px;
+        }
+
+        /* 搜索筛选区域 */
+        .filter-bar {
+            background: linear-gradient(180deg, rgba(10, 20, 34, 0.96) 0%, rgba(8, 16, 29, 0.94) 100%);
+            padding: 10px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 162, 255, 0.18);
+            box-shadow: 0 14px 30px rgba(2, 8, 20, 0.32);
+            margin-bottom: 14px;
+            overflow: hidden;
+        }
+
+        .filter-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 212, 255, 0.42) rgba(7, 16, 28, 0.75);
+        }
+
+        /* 美化滚动条（Webkit浏览器） */
+        .filter-row::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .filter-row::-webkit-scrollbar-track {
+            background: rgba(7, 16, 28, 0.75);
+            border-radius: 3px;
+        }
+
+        .filter-row::-webkit-scrollbar-thumb {
+            background: rgba(0, 212, 255, 0.42);
+            border-radius: 3px;
+            transition: background 0.3s;
+        }
+
+        .filter-row::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 212, 255, 0.68);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 145px;
+            flex-shrink: 0;
+        }
+
+        .filter-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #8ca6c8;
+            white-space: nowrap;
+        }
+
+        .filter-select, .filter-input {
+            height: 36px;
+            padding: 7px 10px;
+            border: 1px solid rgba(88, 116, 155, 0.32);
+            border-radius: 6px;
+            font-size: 12px;
+            transition: all 0.3s;
+            white-space: nowrap;
+            background: rgba(11, 23, 39, 0.92);
+            color: #e8f1ff;
+        }
+
+        .filter-select:focus, .filter-input:focus {
+            outline: none;
+            border-color: rgba(0, 212, 255, 0.72);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12);
+        }
+
+        .filter-input::placeholder {
+            color: #667d9f;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+            margin-left: auto;
+            flex-shrink: 0;
+            padding-left: 8px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            height: 36px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(18, 31, 49, 0.95);
+            color: #d6e5ff;
+            border: 1px solid rgba(88, 116, 155, 0.26);
+        }
+
+        .alarm-content-panel {
+            background: linear-gradient(180deg, rgba(10, 20, 34, 0.96) 0%, rgba(8, 15, 27, 0.94) 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(0, 162, 255, 0.16);
+            box-shadow: 0 18px 36px rgba(2, 8, 20, 0.34);
+            overflow: hidden;
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 告警卡片网格 */
+        .alarm-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 14px;
+            margin-bottom: 0;
+        }
+
+        .alarm-card {
+            background: linear-gradient(180deg, rgba(11, 22, 36, 0.98) 0%, rgba(8, 17, 29, 0.96) 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(84, 112, 150, 0.2);
+            box-shadow: 0 10px 24px rgba(2, 8, 20, 0.28);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .alarm-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(0, 212, 255, 0.28);
+            box-shadow: 0 16px 30px rgba(4, 16, 36, 0.42);
+        }
+
+        .alarm-card:hover .alarm-image::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.1) 100%);
+            pointer-events: none;
+        }
+
+        .alarm-image {
+            position: relative;
+            width: 100%;
+            height: 176px;
+            overflow: hidden;
+            background: linear-gradient(180deg, rgba(13, 24, 39, 0.96) 0%, rgba(7, 14, 24, 0.96) 100%);
+        }
+
+        .alarm-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .alarm-time-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(4, 11, 20, 0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .alarm-type-badge {
+            position: absolute;
+            top: 10px;
+            left: 38px;
+            background: linear-gradient(135deg, rgba(255, 117, 87, 0.92) 0%, rgba(255, 150, 82, 0.9) 100%);
+            color: white;
+            padding: 4px 9px;
+            border-radius: 5px;
+            font-size: 10px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 8px 18px rgba(255, 117, 87, 0.24);
+            line-height: 1.2;
+        }
+
+        .alarm-content {
+            padding: 12px 14px 54px;
+        }
+
+        .alarm-info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .alarm-source {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #dce8fb;
+            font-size: 12.5px;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .alarm-source i {
+            color: #66d9ff;
+        }
+
+        .alarm-source span {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .alarm-date {
+            color: #87a0c4;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+
+        .alarm-details {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(87, 112, 150, 0.2);
+        }
+
+        .alarm-detail-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .alarm-detail-item i {
+            color: #7a93b6;
+            width: 16px;
+        }
+
+        .alarm-detail-item span {
+            color: #cfe0f7;
+        }
+
+        .alarm-report-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            min-width: 0;
+            color: #b7cae3;
+            font-size: 11.5px;
+        }
+
+        .alarm-report-row i {
+            color: #63c9ff;
+            font-size: 11px;
+            flex-shrink: 0;
+        }
+
+        .alarm-url-text {
+            min-width: 0;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #dce9fb;
+        }
+
+        .alarm-badge-row {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 6px;
+            align-items: stretch;
+        }
+
+        /* 标签 */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            max-width: 100%;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            border: 1px solid transparent;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .badge i {
+            flex-shrink: 0;
+            font-size: 10px;
+        }
+
+        .badge-warning {
+            background: rgba(255, 205, 96, 0.14);
+            border-color: rgba(255, 205, 96, 0.22);
+            color: #ffd974;
+        }
+
+        .badge-danger {
+            background: rgba(255, 112, 112, 0.14);
+            border-color: rgba(255, 112, 112, 0.22);
+            color: #ff9f9f;
+        }
+
+        .badge-success {
+            background: rgba(72, 209, 146, 0.14);
+            border-color: rgba(72, 209, 146, 0.22);
+            color: #7df0bb;
+        }
+
+        .badge-info {
+            background: rgba(0, 212, 255, 0.14);
+            border-color: rgba(0, 212, 255, 0.22);
+            color: #7feaff;
+        }
+
+        /* 操作按钮 */
+        .alarm-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0;
+            gap: 10px;
+            padding: 10px 16px;
+            border-bottom: 1px solid rgba(87, 112, 150, 0.18);
+            min-height: 50px;
+        }
+
+        .batch-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff5252 0%, #f48fb1 100%);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 82, 82, 0.4);
+        }
+
+        .alarm-checkbox {
+            position: absolute;
+            top: 12px;
+            left: 10px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            z-index: 10;
+            accent-color: #00d4ff;
+            background: rgba(9, 18, 31, 0.96);
+            border-radius: 3px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s;
+        }
+
+        .alarm-checkbox:hover {
+            transform: scale(1.15);
+            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+        }
+
+        .alarm-card.selected {
+            border-color: rgba(0, 212, 255, 0.52);
+            box-shadow: 0 0 0 1px rgba(0, 212, 255, 0.2), 0 16px 34px rgba(2, 8, 20, 0.36);
+        }
+
+        .delete-btn {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            background: rgba(255, 82, 82, 0.92);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+            z-index: 10;
+            opacity: 0;
+            transform: translateY(8px);
+            pointer-events: none;
+        }
+
+        .alarm-card:hover .delete-btn {
+            opacity: 1;  /* 悬停时显示 */
+            transform: translateY(0);  /* 悬停时回到正常位置 */
+            pointer-events: auto;  /* 显示时可点击 */
+        }
+
+        .delete-btn:hover {
+            background: #ff1744;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 23, 68, 0.4);
+        }
+
+        .alarm-scroll-area {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 16px 18px 18px;
+        }
+
+        .alarm-scroll-area::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .alarm-scroll-area::-webkit-scrollbar-track {
+            background: rgba(7, 16, 28, 0.72);
+        }
+
+        .alarm-scroll-area::-webkit-scrollbar-thumb {
+            background: rgba(0, 212, 255, 0.36);
+            border-radius: 999px;
+        }
+
+        /* 分页 */
+        .pagination {
+            background: rgba(8, 16, 28, 0.98);
+            padding: 10px 16px;
+            border-radius: 0;
+            box-shadow: none;
+            border-top: 1px solid rgba(87, 112, 150, 0.18);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .pagination-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .pagination-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .goto-text {
+            color: #9eb5d5;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .goto-input {
+            width: 70px;
+            padding: 7px 10px;
+            border: 1px solid rgba(88, 116, 155, 0.3);
+            border-radius: 6px;
+            font-size: 13px;
+            text-align: center;
+            transition: all 0.3s;
+            outline: none;
+            background: rgba(11, 23, 39, 0.92);
+            color: #e8f1ff;
+        }
+
+        .goto-input:focus {
+            border-color: rgba(0, 212, 255, 0.68);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12);
+        }
+
+        .goto-input:hover {
+            border-color: rgba(0, 212, 255, 0.52);
+        }
+
+        .goto-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+
+        .goto-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .clear-btn {
+            background: linear-gradient(135deg, #ff5252 0%, #f48fb1 100%);
+            color: white;
+            border: none;
+            margin-left: 10px;
+        }
+
+        .clear-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 82, 82, 0.4);
+        }
+
+        /* 响应式筛选栏布局 */
+        @media (max-width: 1200px) {
+            .filter-row {
+                flex-wrap: wrap;
+            }
+            
+            .filter-group {
+                min-width: 140px;
+            }
+            
+            .filter-actions {
+                width: 100%;
+                margin-left: 0;
+                padding-left: 0;
+                justify-content: flex-end;
+                margin-top: 10px;
+            }
+        }
+
+        /* 响应式分页布局 */
+        @media (max-width: 768px) {
+            .pagination {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .pagination-left,
+            .pagination-right {
+                width: 100%;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .goto-input {
+                width: 80px;
+            }
+            
+            .filter-group {
+                min-width: 120px;
+            }
+            
+            .clear-btn {
+                margin-left: 0;
+                margin-top: 10px;
+                width: 100%;
+            }
+        }
+
+        .page-btn {
+            padding: 7px 14px;
+            border: 1px solid rgba(88, 116, 155, 0.28);
+            background: rgba(11, 23, 39, 0.92);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #d8e5fb;
+            font-size: 13px;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            border-color: rgba(0, 212, 255, 0.48);
+            color: #8cecff;
+        }
+
+        .page-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: transparent;
+        }
+
+        .page-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            color: #b4c8e5;
+            font-size: 13px;
+            padding: 0 15px;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            background: transparent;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            box-shadow: none;
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .empty-state i {
+            font-size: 64px;
+            color: rgba(0, 212, 255, 0.2);
+            margin-bottom: 20px;
+        }
+
+        .empty-state h3 {
+            font-size: 18px;
+            color: #dbe8ff;
+            margin-bottom: 10px;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+            color: #8ba3c5;
+        }
+
+        body.drawer-open {
+            overflow: hidden;
+        }
+
+        /* 详情抽屉 */
+        .modal {
+            display: block;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.28);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.28s ease, visibility 0.28s ease;
+        }
+
+        .modal.show {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: min(700px, calc(100vw - 12px));
+            height: 100%;
+            background: linear-gradient(180deg, #07111f 0%, #0a1628 100%);
+            border-radius: 28px 0 0 28px;
+            box-shadow: -24px 0 60px rgba(2, 6, 23, 0.48);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transform: translateX(100%);
+            transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .modal.show .modal-content {
+            transform: translateX(0);
+        }
+
+        #detailModal .modal-header {
+            padding: 4px 8px 4px !important;
+            background: linear-gradient(180deg, rgba(12, 21, 34, 0.99) 0%, rgba(10, 18, 29, 0.99) 100%) !important;
+            border-bottom: 1px solid rgba(65, 90, 127, 0.18) !important;
+            color: #e8eef7 !important;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #detailModal .modal-title-wrap {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        #detailModal .modal-title {
+            font-size: 13px !important;
+            font-weight: 700;
+            line-height: 1.05;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #e6edf7 !important;
+        }
+
+        #detailModal .modal-subtitle {
+            margin-top: 0;
+            font-size: 9px;
+            line-height: 1.2;
+            color: rgba(198, 210, 226, 0.64) !important;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #detailModal .modal-subtitle:empty {
+            display: none;
+        }
+
+        #detailModal .btn-close {
+            flex-shrink: 0;
+            background: rgba(18, 30, 46, 0.98) !important;
+            border: 1px solid rgba(70, 95, 131, 0.2) !important;
+            font-size: 13px;
+            color: #9db0c8 !important;
+            cursor: pointer;
+            width: 26px;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 7px;
+            transition: all 0.2s;
+        }
+
+        #detailModal .btn-close:hover {
+            background: rgba(26, 42, 63, 0.99) !important;
+            color: #cfe0ff !important;
+            transform: translateY(-1px);
+        }
+
+        .modal-body {
+            flex: 1;
+            display: grid;
+            grid-template-rows: min-content minmax(0, 1fr) minmax(0, 1fr);
+            gap: 8px;
+            overflow: hidden;
+            padding: 8px 8px 10px;
+        }
+
+        .detail-overview {
+            background: linear-gradient(180deg, rgba(18, 31, 50, 0.96) 0%, rgba(13, 24, 39, 0.98) 100%);
+            border: 1px solid rgba(82, 114, 163, 0.24);
+            border-radius: 16px;
+            padding: 8px 10px;
+            box-shadow: 0 16px 32px rgba(3, 8, 20, 0.22);
+            margin-bottom: 0;
+        }
+
+        .detail-overview-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px 8px;
+            margin-bottom: 6px;
+        }
+
+        .detail-overview-main {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .detail-overview-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: rgba(88, 124, 192, 0.18);
+            color: #92b8ff;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            width: fit-content;
+        }
+
+        .detail-overview-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #f8fbff;
+            line-height: 1.15;
+            margin-top: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .detail-overview-meta {
+            margin-top: 3px;
+            color: #8fa4c2;
+            font-size: 11px;
+            line-height: 1.3;
+        }
+
+        .detail-overview-line {
+            margin-top: 5px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #f8fbff;
+            line-height: 1.15;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .detail-overview-inline-meta {
+            margin-left: 8px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #8fa4c2;
+        }
+
+        .detail-badge-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 5px;
+        }
+
+        .detail-badge-row .badge {
+            padding: 3px 8px;
+            font-size: 11px;
+            border-radius: 10px;
+        }
+
+        .detail-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 6px;
+        }
+
+        .summary-item {
+            background: rgba(11, 22, 36, 0.88);
+            border: 1px solid rgba(90, 118, 157, 0.22);
+            border-radius: 12px;
+            padding: 8px 10px;
+            min-width: 0;
+        }
+
+        .summary-item-wide {
+            grid-column: 1 / -1;
+        }
+
+        .summary-item-wide .summary-value {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .summary-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+            color: #88a1c4;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .summary-label i {
+            color: #7ea2ff;
+        }
+
+        .summary-value {
+            color: #ecf4ff;
+            font-size: 13px;
+            line-height: 1.25;
+            word-break: break-all;
+        }
+
+        .summary-value a {
+            color: #9fc3ff;
+            text-decoration: none;
+        }
+
+        .summary-value a:hover {
+            text-decoration: underline;
+        }
+
+        .detail-description {
+            margin-top: 8px;
+            padding: 8px 10px;
+            border-radius: 12px;
+            background: linear-gradient(180deg, rgba(72, 46, 10, 0.5) 0%, rgba(54, 35, 7, 0.78) 100%);
+            border: 1px solid rgba(255, 191, 90, 0.16);
+            color: #ffd79c;
+            line-height: 1.4;
+            font-size: 12px;
+        }
+
+        .media-card {
+            background: linear-gradient(180deg, rgba(15, 27, 44, 0.98) 0%, rgba(10, 19, 31, 0.98) 100%);
+            border: 1px solid rgba(82, 114, 163, 0.22);
+            border-radius: 16px;
+            padding: 10px;
+            box-shadow: 0 16px 32px rgba(3, 8, 20, 0.2);
+            margin-bottom: 0;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .media-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .media-card-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #f8fbff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .media-card-title i {
+            color: #8fb2ff;
+        }
+
+        .media-content {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .media-preview {
+            flex: 1;
+            min-height: 0;
+            background: linear-gradient(180deg, rgba(5, 11, 19, 0.98) 0%, rgba(8, 15, 24, 0.98) 100%);
+            border: 1px solid rgba(93, 120, 158, 0.2);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .modal-image,
+        .modal-video {
+            width: 100%;
+            height: 100%;
+            display: block;
+            border-radius: 16px;
+            background: #0f172a;
+            box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.18);
+            object-fit: contain;
+        }
+
+        .media-placeholder {
+            border-radius: 16px;
+            min-height: 0;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(14, 24, 37, 0.98) 0%, rgba(9, 16, 27, 0.98) 100%);
+            color: #8ba0be;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            text-align: center;
+            padding: 24px;
+        }
+
+        .media-placeholder i {
+            font-size: 36px;
+            color: #6e86a8;
+        }
+
+        .media-error {
+            width: 100%;
+            margin-top: 6px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: rgba(88, 24, 31, 0.72);
+            color: #ffb4b8;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 100%;
+                border-radius: 0;
+            }
+
+            .modal-header {
+                padding: 20px 18px 16px;
+            }
+
+            .modal-body {
+                display: flex;
+                flex-direction: column;
+                overflow-y: auto;
+                padding: 16px 16px 24px;
+            }
+
+            .detail-overview-title {
+                font-size: 18px;
+            }
+
+            .detail-summary-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 520px) {
+            .detail-summary-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .btn-primary {
+            background: linear-gradient(180deg, rgba(8, 31, 53, 0.96), rgba(8, 22, 37, 0.98)) !important;
+            border: 1px solid rgba(0, 212, 255, 0.28) !important;
+            color: #eef9ff;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 12px 24px rgba(2, 8, 20, 0.28) !important;
+        }
+
+        .btn-secondary {
+            background: rgba(8, 20, 34, 0.82) !important;
+            border: 1px solid rgba(0, 162, 255, 0.18) !important;
+            color: #dbe8ff !important;
+        }
+
+        .btn-danger {
+            background: rgba(66, 24, 24, 0.92) !important;
+            border: 1px solid rgba(255, 108, 108, 0.24) !important;
+            color: #ffd7d7 !important;
+        }
+
+        .alarm-card.selected {
+            border-color: rgba(0, 212, 255, 0.34) !important;
+            box-shadow: 0 0 0 1px rgba(0, 212, 255, 0.14), 0 18px 30px rgba(4, 16, 36, 0.34) !important;
+        }
+
+        .modal-content {
+            background: linear-gradient(180deg, rgba(10, 20, 34, 0.98), rgba(8, 15, 27, 0.96)) !important;
+            border: 1px solid rgba(0, 162, 255, 0.18) !important;
+            box-shadow: 0 22px 40px rgba(2, 8, 20, 0.42) !important;
+        }
+
+        .modal-header {
+            background: linear-gradient(90deg, rgba(5, 16, 29, 0.96), rgba(8, 26, 46, 0.92)) !important;
+            border-bottom: 1px solid rgba(0, 162, 255, 0.14) !important;
+        }
+    </style>
+    <link rel="stylesheet" href="pcb-theme.css?v=20260323-black3">
+</head>
+
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <div class="header-title">
+                <i class="fas fa-bell"></i>
+                告警管理
+            </div>
+        </div>
+
+        <!-- 筛选栏 -->
+        <div class="filter-bar">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label class="filter-label">告警任务</label>
+                    <select class="filter-select" id="filterTask">
+                        <option value="">全部任务</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">视频源道</label>
+                    <select class="filter-select" id="filterSource">
+                        <option value="">全部视频源</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">告警日期</label>
+                    <input type="date" class="filter-input" id="filterDate">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">告警内容</label>
+                    <input type="text" class="filter-input" id="filterContent" placeholder="搜索告警内容">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">告警状态</label>
+                    <select class="filter-select" id="filterStatus">
+                        <option value="">全部状态</option>
+                        <option value="reported">已上报</option>
+                        <option value="failed">上报失败</option>
+                        <option value="pending">未上报</option>
+                    </select>
+                </div>
+                <div class="filter-actions">
+                    <button class="btn btn-primary" onclick="searchAlarms()">
+                        <i class="fas fa-search"></i>
+                        查询
+                    </button>
+                    <button class="btn btn-secondary" onclick="resetFilters()">
+                        <i class="fas fa-redo"></i>
+                        重置
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="alarm-content-panel">
+            <!-- 批量操作栏 -->
+            <div class="alarm-actions">
+                <div class="batch-actions">
+                    <button class="btn btn-danger" onclick="batchDelete()" id="batchDeleteBtn" style="display: none;">
+                        <i class="fas fa-trash"></i>
+                        批量删除 (<span id="selectedCount">0</span>)
+                    </button>
+                </div>
+            </div>
+
+            <div class="alarm-scroll-area" id="alarmScrollArea">
+                <!-- 告警卡片网格 -->
+                <div class="alarm-grid" id="alarmGrid">
+                    <!-- 动态加载 -->
+                </div>
+
+                <!-- 空状态 -->
+                <div class="empty-state" id="emptyState" style="display: none;">
+                    <i class="fas fa-bell-slash"></i>
+                    <h3>暂无告警记录</h3>
+                    <p>当前没有符合条件的告警信息</p>
+                </div>
+            </div>
+
+            <!-- 分页 -->
+            <div class="pagination" id="pagination" style="display: none;">
+                <div class="pagination-left">
+                    <button class="page-btn" id="firstPage" onclick="goToFirstPage()" title="首页">
+                        <i class="fas fa-angle-double-left"></i>
+                    </button>
+                    <button class="page-btn" id="prevPage" onclick="changePage(-1)" title="上一页">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span class="page-info" id="pageInfo">第 1 页 / 共 1 页</span>
+                    <button class="page-btn" id="nextPage" onclick="changePage(1)" title="下一页">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                    <button class="page-btn" id="lastPage" onclick="goToLastPage()" title="末页">
+                        <i class="fas fa-angle-double-right"></i>
+                    </button>
+                </div>
+                <div class="pagination-right">
+                    <span class="goto-text">跳转到</span>
+                    <input type="number" 
+                           id="gotoPageInput" 
+                           class="goto-input" 
+                           min="1" 
+                           placeholder="页码"
+                           onkeypress="handlePageInputKeypress(event)">
+                    <button class="page-btn goto-btn" onclick="gotoPage()" title="跳转">
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                    <button class="page-btn clear-btn" onclick="clearAllRecords()" title="清除所有记录">
+                        <i class="fas fa-trash-alt"></i>
+                        清除记录
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 详情模态框 -->
+    <div class="modal" id="detailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <div class="modal-title" id="detailModalTitle">告警详情</div>
+                    <div class="modal-subtitle" id="detailModalSubtitle">点击告警卡片后可在这里查看详情</div>
+                </div>
+                <button class="btn-close" onclick="closeDetailModal()" aria-label="关闭告警详情">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- 动态加载 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let alarms = [];
+        let filteredAlarms = [];
+        let currentPage = 1;
+        let pageSize = 12;
+        let totalPages = 1;
+        let selectedAlarms = new Set(); // 存储选中的告警ID
+        let autoRefreshInterval = null; // 自动刷新定时器
+        let taskOptions = [];
+        let taskOptionsMap = {};
+        let activeAlarmId = null;
+
+        // 页面加载时获取数据
+        window.onload = function() {
+            loadTasks();
+            loadVideoSources();
+            loadAlarms();
+            // 启动自动刷新（每5秒刷新一次）
+            startAutoRefresh();
+        };
+
+        // 启动自动刷新
+        function startAutoRefresh() {
+            autoRefreshInterval = setInterval(() => {
+                loadAlarms(true); // 静默刷新，不重置页码
+            }, 5000);
+        }
+
+        // 停止自动刷新
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+        }
+
+        // 页面卸载时停止自动刷新
+        window.addEventListener('beforeunload', () => {
+            stopAutoRefresh();
+        });
+
+        // 加载任务列表
+        function loadTasks() {
+            axios.get('/api/tasks')
+                .then(response => {
+                    if (response.data.status === 'success') {
+                        const tasks = response.data.tasks || [];
+                        taskOptions = Array.isArray(tasks) ? tasks : [];
+                        taskOptionsMap = {};
+                        const select = document.getElementById('filterTask');
+                        tasks.forEach(task => {
+                            taskOptionsMap[String(task.id)] = task;
+                            const option = document.createElement('option');
+                            option.value = task.id;
+                            option.textContent = task.taskNumber;
+                            select.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('加载任务列表失败:', error);
+                });
+        }
+
+        function normalizeText(value) {
+            return String(value ?? '').trim().toLowerCase();
+        }
+
+        function taskCategory(task) {
+            const algorithm = normalizeText(task?.algorithm);
+            const taskNumber = normalizeText(task?.taskNumber);
+            const merged = `${algorithm} ${taskNumber}`;
+            if (merged.includes('明烟明火') || merged.includes('烟火') || merged.includes('fire') || merged.includes('smoke')) {
+                return 'fire_smoke';
+            }
+            if (merged.includes('region_intrusion') || merged.includes('区域入侵') || merged.includes('入侵')) {
+                return 'region_intrusion';
+            }
+            if (merged.includes('打架') || merged.includes('fight')) {
+                return 'fight';
+            }
+            if (merged.includes('跌倒') || merged.includes('fall')) {
+                return 'fall';
+            }
+            if (merged.includes('人脸') || merged.includes('face')) {
+                return 'face';
+            }
+            return '';
+        }
+
+        function alarmCategory(alarm) {
+            const alarmType = normalizeText(alarm?.alarmType);
+            const description = normalizeText(alarm?.description);
+            const merged = `${alarmType} ${description}`;
+            if (merged.includes('火焰') || merged.includes('烟雾') || merged.includes('烟火') || merged.includes('fire') || merged.includes('smoke')) {
+                return 'fire_smoke';
+            }
+            if (merged.includes('区域入侵') || merged.includes('入侵') || merged.includes('intrusion')) {
+                return 'region_intrusion';
+            }
+            if (merged.includes('打架') || merged.includes('fight')) {
+                return 'fight';
+            }
+            if (merged.includes('跌倒') || merged.includes('fall')) {
+                return 'fall';
+            }
+            if (merged.includes('人脸') || merged.includes('face')) {
+                return 'face';
+            }
+            return '';
+        }
+
+        function matchTaskByFallbackCategory(taskId, alarm) {
+            const selectedTask = taskOptionsMap[String(taskId)];
+            if (!selectedTask) {
+                return false;
+            }
+
+            const selectedCategory = taskCategory(selectedTask);
+            const currentAlarmCategory = alarmCategory(alarm);
+            if (!selectedCategory || selectedCategory !== currentAlarmCategory) {
+                return false;
+            }
+
+            const sameCategoryTasks = taskOptions.filter(task => taskCategory(task) === selectedCategory);
+            if (sameCategoryTasks.length <= 1) {
+                return true;
+            }
+
+            const alarmSourceId = String(alarm?.videoSourceId ?? '');
+            return sameCategoryTasks.some(task =>
+                String(task.id) === String(taskId) &&
+                String(task.videoSourceId ?? '') === alarmSourceId
+            );
+        }
+
+        function alarmMatchesTaskFilter(taskId, alarm) {
+            if (!taskId) {
+                return true;
+            }
+            const selectedTask = taskOptionsMap[String(taskId)];
+            const alarmTaskId = String(alarm?.taskId ?? '');
+            if (alarmTaskId === String(taskId)) {
+                if (!selectedTask) {
+                    return true;
+                }
+                const selectedCategory = taskCategory(selectedTask);
+                const currentAlarmCategory = alarmCategory(alarm);
+                if (selectedCategory && currentAlarmCategory && selectedCategory !== currentAlarmCategory) {
+                    return false;
+                }
+                return true;
+            }
+            return matchTaskByFallbackCategory(taskId, alarm);
+        }
+
+        // 加载视频源列表
+        function loadVideoSources() {
+            axios.get('/api/channels')
+                .then(response => {
+                    if (response.data.status === 'success') {
+                        const channels = response.data.channels || [];
+                        const select = document.getElementById('filterSource');
+                        channels.forEach(channel => {
+                            const option = document.createElement('option');
+                            option.value = channel.id;
+                            option.textContent = channel.name;
+                            select.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('加载视频源列表失败:', error);
+                });
+        }
+
+        // 加载告警列表
+        function loadAlarms(silent = false) {
+            axios.get('/api/alarms')
+                .then(response => {
+                    if (response.data.status === 'success') {
+                        alarms = response.data.alarms || [];
+                        // 如果不是静默刷新，重新应用筛选和重置页码
+                        if (!silent) {
+                            filteredAlarms = [...alarms];
+                        } else {
+                            // 静默刷新时保持当前筛选条件
+                            applyCurrentFilters();
+                        }
+                        renderAlarms();
+                        syncActiveAlarmDetail();
+                    }
+                })
+                .catch(error => {
+                    console.error('加载告警失败:', error);
+                    if (!silent) {
+                        alarms = [];
+                        filteredAlarms = [];
+                        renderAlarms();
+                        syncActiveAlarmDetail();
+                    }
+                });
+        }
+
+        // 应用当前筛选条件
+        function applyCurrentFilters() {
+            const taskId = document.getElementById('filterTask').value;
+            const sourceId = document.getElementById('filterSource').value;
+            const date = document.getElementById('filterDate').value;
+            const content = document.getElementById('filterContent').value.trim().toLowerCase();
+            const status = document.getElementById('filterStatus').value;
+
+            filteredAlarms = alarms.filter(alarm => {
+                const alarmSourceId = String(alarm.videoSourceId ?? '');
+                const alarmTimestamp = String(alarm.timestamp ?? '');
+                const alarmDate = alarmTimestamp.slice(0, 10);
+                const searchText = [
+                    alarm.alarmType,
+                    alarm.description,
+                    alarm.videoSourceName,
+                    alarm.reportUrl,
+                ]
+                    .map(value => String(value ?? '').toLowerCase())
+                    .join(' ');
+                const alarmStatus = String(alarm.status ?? '');
+
+                if (!alarmMatchesTaskFilter(taskId, alarm)) return false;
+                if (sourceId && alarmSourceId !== sourceId) return false;
+                if (date && alarmDate !== date) return false;
+                if (content && !searchText.includes(content)) return false;
+                if (status && alarmStatus !== status) return false;
+                return true;
+            });
+        }
+
+        // 搜索告警
+        function searchAlarms() {
+            const taskId = document.getElementById('filterTask').value;
+            const sourceId = document.getElementById('filterSource').value;
+            const date = document.getElementById('filterDate').value;
+            const content = document.getElementById('filterContent').value.trim().toLowerCase();
+            const status = document.getElementById('filterStatus').value;
+
+            filteredAlarms = alarms.filter(alarm => {
+                const alarmSourceId = String(alarm.videoSourceId ?? '');
+                const alarmTimestamp = String(alarm.timestamp ?? '');
+                const alarmDate = alarmTimestamp.slice(0, 10);
+                const searchText = [
+                    alarm.alarmType,
+                    alarm.description,
+                    alarm.videoSourceName,
+                    alarm.reportUrl,
+                ]
+                    .map(value => String(value ?? '').toLowerCase())
+                    .join(' ');
+                const alarmStatus = String(alarm.status ?? '');
+
+                if (!alarmMatchesTaskFilter(taskId, alarm)) return false;
+                if (sourceId && alarmSourceId !== sourceId) return false;
+                if (date && alarmDate !== date) return false;
+                if (content && !searchText.includes(content)) return false;
+                if (status && alarmStatus !== status) return false;
+                return true;
+            });
+
+            currentPage = 1;
+            renderAlarms();
+        }
+
+        // 重置筛选
+        function resetFilters() {
+            document.getElementById('filterTask').value = '';
+            document.getElementById('filterSource').value = '';
+            document.getElementById('filterDate').value = '';
+            document.getElementById('filterContent').value = '';
+            document.getElementById('filterStatus').value = '';
+            filteredAlarms = [...alarms];
+            currentPage = 1;
+            renderAlarms();
+        }
+
+        // 渲染告警列表
+        function renderAlarms() {
+            const grid = document.getElementById('alarmGrid');
+            const emptyState = document.getElementById('emptyState');
+            const pagination = document.getElementById('pagination');
+            const scrollArea = document.getElementById('alarmScrollArea');
+
+            if (filteredAlarms.length === 0) {
+                grid.innerHTML = '';
+                emptyState.style.display = 'flex';
+                pagination.style.display = 'none';
+                updateSelectedCount();
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            pagination.style.display = 'flex';
+            if (scrollArea) {
+                scrollArea.scrollTop = 0;
+            }
+
+            // 计算分页
+            totalPages = Math.ceil(filteredAlarms.length / pageSize);
+            const startIndex = (currentPage - 1) * pageSize;
+            const endIndex = Math.min(startIndex + pageSize, filteredAlarms.length);
+            const pageAlarms = filteredAlarms.slice(startIndex, endIndex);
+
+            // 渲染卡片
+            grid.innerHTML = pageAlarms.map(alarm => `
+                <div class="alarm-card ${selectedAlarms.has(alarm.id) ? 'selected' : ''}" id="alarm-${alarm.id}">
+                    <input type="checkbox" 
+                           class="alarm-checkbox" 
+                           ${selectedAlarms.has(alarm.id) ? 'checked' : ''}
+                           onclick="toggleSelection(event, ${alarm.id})">
+                    <div class="alarm-image" onclick="showDetailModal(${alarm.id})">
+                        <img src="${alarm.imageUrl}" alt="告警图片" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzBiMTYyOCIvPjxyZWN0IHg9IjEwIiB5PSIxMCIgd2lkdGg9IjM4MCIgaGVpZ2h0PSIyODAiIHJ4PSIxNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMWYzZDVmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1kYXNoYXJyYXk9IjEwIDgiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE4IiBmaWxsPSIjNmY4OWFiIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+5pqC5peg5Zu+54mHPC90ZXh0Pjwvc3ZnPg=='">
+                        <div class="alarm-time-badge">
+                            <i class="fas fa-clock"></i>
+                            ${formatTime(alarm.timestamp)}
+                        </div>
+                        <div class="alarm-type-badge">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            ${alarm.alarmType}
+                        </div>
+                    </div>
+                    <div class="alarm-content" onclick="showDetailModal(${alarm.id})">
+                        <div class="alarm-info-row">
+                            <div class="alarm-source">
+                                <i class="fas fa-video"></i>
+                                <span>${alarm.videoSourceName || '未知'}</span>
+                            </div>
+                            <div class="alarm-date">${formatDate(alarm.timestamp)}</div>
+                        </div>
+                        <div class="alarm-details">
+                            <div class="alarm-report-row" title="${alarm.reportUrl || '无上报地址'}">
+                                <i class="fas fa-link"></i>
+                                <span class="alarm-url-text">${alarm.reportUrl || '无上报地址'}</span>
+                            </div>
+                            <div class="alarm-badge-row">
+                                ${getStatusBadge(alarm.status)}
+                                ${getVideoStatusBadge(alarm.videoStatus, alarm.videoUrl)}
+                                ${getAlarmContentBadge(alarm.alarmType)}
+                            </div>
+                        </div>
+                    </div>
+                    <button class="delete-btn" onclick="deleteSingleAlarm(event, ${alarm.id})">
+                        <i class="fas fa-trash"></i> 删除
+                    </button>
+                </div>
+            `).join('');
+
+            // 更新分页信息和选中计数
+            updatePagination();
+            updateSelectedCount();
+        }
+
+        // 获取状态徽章HTML
+        function getStatusBadge(status) {
+            const statusMap = {
+                'reported': '<span class="badge badge-success"><i class="fas fa-check-circle"></i> 已上报</span>',
+                'failed': '<span class="badge badge-danger"><i class="fas fa-times-circle"></i> 上报失败</span>',
+                'pending': '<span class="badge badge-info"><i class="fas fa-clock"></i> 未上报</span>'
+            };
+            return statusMap[status] || '<span class="badge badge-info">未知状态</span>';
+        }
+
+        function getVideoStatusBadge(status, videoUrl) {
+            const normalized = String(status || '').trim().toLowerCase();
+            if ((normalized === 'ready' || !normalized) && videoUrl) {
+                return '<span class="badge badge-success"><i class="fas fa-film"></i> 视频就绪</span>';
+            }
+            if (normalized === 'pending') {
+                return '<span class="badge badge-info"><i class="fas fa-spinner"></i> 视频生成中</span>';
+            }
+            if (normalized === 'failed') {
+                return '<span class="badge badge-danger"><i class="fas fa-times-circle"></i> 视频失败</span>';
+            }
+            return '<span class="badge badge-warning"><i class="fas fa-video-slash"></i> 无视频</span>';
+        }
+
+        // 获取告警内容徽章HTML
+        function getAlarmContentBadge(type) {
+            return `<span class="badge badge-warning">${type}</span>`;
+        }
+
+        // 格式化时间（仅时间）
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        // 格式化日期
+        function formatDate(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleString('zh-CN', { 
+                year: 'numeric', 
+                month: '2-digit', 
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        function getAlarmById(alarmId) {
+            const alarmKey = String(alarmId);
+            return alarms.find(alarm => String(alarm.id) === alarmKey) ||
+                filteredAlarms.find(alarm => String(alarm.id) === alarmKey) ||
+                null;
+        }
+
+        function buildSummaryItem(icon, label, valueHtml, wide = false) {
+            return `
+                <div class="summary-item ${wide ? 'summary-item-wide' : ''}">
+                    <div class="summary-label">
+                        <i class="${icon}"></i>
+                        <span>${label}</span>
+                    </div>
+                    <div class="summary-value">${valueHtml}</div>
+                </div>
+            `;
+        }
+
+        function buildMediaPlaceholder(icon, title, description) {
+            return `
+                <div class="media-placeholder">
+                    <i class="${icon}"></i>
+                    <div>${title}</div>
+                    <div>${description}</div>
+                </div>
+            `;
+        }
+
+        function renderDetailModalContent(alarm) {
+            const modalTitle = document.getElementById('detailModalTitle');
+            const modalSubtitle = document.getElementById('detailModalSubtitle');
+            const modalBody = document.getElementById('modalBody');
+
+            const imageUrl = String(alarm.imageUrl || '').trim();
+            const videoUrl = String(alarm.videoUrl || '').trim();
+            const reportUrl = String(alarm.reportUrl || '').trim();
+            const processStatus = String(alarm.processStatus || '').trim();
+            const description = String(alarm.description || '').trim();
+            const videoError = String(alarm.videoError || '').trim();
+            const videoDurationText = alarm.videoDurationSec ? `${alarm.videoDurationSec} 秒` : (videoUrl ? '未记录' : '未录制');
+            const fallbackImage = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNzAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0iIzBiMTYyOCIvPjxyZWN0IHg9IjE4IiB5PSIxOCIgd2lkdGg9IjY2NCIgaGVpZ2h0PSIzNjQiIHJ4PSIyMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMWYzZDVmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1kYXNoYXJyYXk9IjEyIDEwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyMiIgZmlsbD0iIzZmODlhYiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuaaguaXoOWbvueJhzwvdGV4dD48L3N2Zz4=';
+            const reportUrlLabel = reportUrl.length > 42 ? `${reportUrl.slice(0, 39)}...` : reportUrl;
+
+            modalTitle.textContent = `${alarm.alarmType || '告警详情'} · ${alarm.videoSourceName || '未知视频源'} · ${formatDate(alarm.timestamp)}`;
+            modalSubtitle.textContent = '';
+
+            const processBadge = processStatus
+                ? `<span class="badge badge-warning"><i class="fas fa-tasks"></i> ${processStatus}</span>`
+                : '';
+
+            const imageSection = imageUrl
+                ? `
+                    <div class="media-content">
+                        <div class="media-preview">
+                            <img src="${imageUrl}" class="modal-image" alt="告警图片" onerror="this.src='${fallbackImage}'">
+                        </div>
+                    </div>
+                `
+                : `
+                    <div class="media-content">
+                        <div class="media-preview">
+                            ${buildMediaPlaceholder('fas fa-image', '暂无告警截图', '该记录当前没有可用截图')}
+                        </div>
+                    </div>
+                `;
+
+            let videoBody = buildMediaPlaceholder('fas fa-film', '暂无告警视频', '该告警当前没有关联的视频片段');
+            if (videoUrl) {
+                videoBody = `
+                    <div class="media-content">
+                        <div class="media-preview">
+                            <video class="modal-video" controls preload="metadata" src="${videoUrl}"></video>
+                        </div>
+                        ${videoError ? `<div class="media-error">失败原因：${videoError}</div>` : ''}
+                    </div>
+                `;
+            } else if (videoError) {
+                videoBody = `
+                    <div class="media-content">
+                        <div class="media-preview">
+                            ${buildMediaPlaceholder('fas fa-film', '暂无告警视频', '该告警当前没有关联的视频片段')}
+                        </div>
+                        <div class="media-error">失败原因：${videoError}</div>
+                    </div>
+                `;
+            } else {
+                videoBody = `
+                    <div class="media-content">
+                        <div class="media-preview">
+                            ${videoBody}
+                        </div>
+                    </div>
+                `;
+            }
+
+            modalBody.innerHTML = `
+                <div class="detail-overview">
+                    <div class="detail-overview-head">
+                        <div class="detail-overview-main">
+                            <div class="detail-overview-label">
+                                <i class="fas fa-bell"></i>
+                                告警详情
+                            </div>
+                            <div class="detail-overview-line">
+                                ${alarm.alarmType || '未命名告警'}
+                                <span class="detail-overview-inline-meta">#${alarm.id || '-'} · ${formatDate(alarm.timestamp)}</span>
+                            </div>
+                        </div>
+                        <div class="detail-badge-row">
+                            ${getStatusBadge(alarm.status)}
+                            ${getVideoStatusBadge(alarm.videoStatus, videoUrl)}
+                            ${processBadge}
+                        </div>
+                    </div>
+
+                    <div class="detail-summary-grid">
+                        ${buildSummaryItem('fas fa-video', '视频源', alarm.videoSourceName || '未知')}
+                        ${buildSummaryItem('fas fa-hashtag', '任务 ID', alarm.taskId || '-')}
+                        ${buildSummaryItem('fas fa-plug', '视频源 ID', alarm.videoSourceId || '-')}
+                        ${buildSummaryItem('fas fa-clock', '录制时长', videoDurationText)}
+                        ${buildSummaryItem('fas fa-link', '上报地址', reportUrl ? `<a href="${reportUrl}" target="_blank" rel="noopener" title="${reportUrl}">${reportUrlLabel}</a>` : '未配置', true)}
+                    </div>
+
+                    ${description ? `<div class="detail-description"><strong>告警说明：</strong>${description}</div>` : ''}
+                </div>
+
+                <div class="media-card">
+                    <div class="media-card-header">
+                        <div class="media-card-title">
+                            <i class="fas fa-camera"></i>
+                            告警截图
+                        </div>
+                    </div>
+                    ${imageSection}
+                </div>
+
+                <div class="media-card">
+                    <div class="media-card-header">
+                        <div class="media-card-title">
+                            <i class="fas fa-film"></i>
+                            告警视频
+                        </div>
+                    </div>
+                    ${videoBody}
+                </div>
+            `;
+        }
+
+        function syncActiveAlarmDetail() {
+            const modal = document.getElementById('detailModal');
+            if (!modal.classList.contains('show') || activeAlarmId === null) {
+                return;
+            }
+
+            const alarm = getAlarmById(activeAlarmId);
+            if (!alarm) {
+                closeDetailModal();
+                return;
+            }
+
+            renderDetailModalContent(alarm);
+        }
+
+        // 更新分页
+        function updatePagination() {
+            document.getElementById('pageInfo').textContent = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
+            
+            // 更新所有分页按钮的状态
+            const isFirstPage = currentPage === 1;
+            const isLastPage = currentPage === totalPages;
+            
+            document.getElementById('firstPage').disabled = isFirstPage;
+            document.getElementById('prevPage').disabled = isFirstPage;
+            document.getElementById('nextPage').disabled = isLastPage;
+            document.getElementById('lastPage').disabled = isLastPage;
+            
+            // 更新输入框的最大值提示
+            const gotoInput = document.getElementById('gotoPageInput');
+            gotoInput.max = totalPages;
+            gotoInput.placeholder = `1-${totalPages}`;
+        }
+
+        // 切换页码
+        function changePage(delta) {
+            const newPage = currentPage + delta;
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                renderAlarms();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        // 跳转到首页
+        function goToFirstPage() {
+            if (currentPage !== 1) {
+                currentPage = 1;
+                renderAlarms();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        // 跳转到末页
+        function goToLastPage() {
+            if (currentPage !== totalPages) {
+                currentPage = totalPages;
+                renderAlarms();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        // 跳转到指定页码
+        function gotoPage() {
+            const input = document.getElementById('gotoPageInput');
+            const pageNum = parseInt(input.value);
+            
+            if (isNaN(pageNum)) {
+                alert('请输入有效的页码');
+                return;
+            }
+            
+            if (pageNum < 1) {
+                alert('页码不能小于 1');
+                input.value = '';
+                return;
+            }
+            
+            if (pageNum > totalPages) {
+                alert(`页码不能大于 ${totalPages}`);
+                input.value = '';
+                return;
+            }
+            
+            currentPage = pageNum;
+            renderAlarms();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            input.value = '';
+        }
+
+        // 处理输入框回车事件
+        function handlePageInputKeypress(event) {
+            if (event.key === 'Enter') {
+                gotoPage();
+            }
+        }
+
+        // 清除所有记录
+        function clearAllRecords() {
+            if (!alarms || alarms.length === 0) {
+                alert('当前没有记录可清除');
+                return;
+            }
+            
+            if (!confirm(`确定要清除所有 ${alarms.length} 条告警记录吗？此操作不可恢复！`)) {
+                return;
+            }
+            
+            // 获取所有记录的ID
+            const allIds = alarms.map(alarm => alarm.id);
+            
+            // 调用批量删除API
+            axios.post('/api/alarms/batch-delete', {
+                ids: allIds
+            })
+                .then(response => {
+                    console.log('清除成功:', response.data);
+                    alert('所有记录已清除');
+                    // 清空本地数据
+                    alarms = [];
+                    filteredAlarms = [];
+                    selectedAlarms.clear();
+                    currentPage = 1;
+                    closeDetailModal();
+                    // 重新渲染（会显示空状态）
+                    renderAlarms();
+                })
+                .catch(error => {
+                    console.error('清除失败:', error);
+                    alert('清除失败，请重试');
+                });
+        }
+
+        // 显示详情模态框
+        function showDetailModal(alarmId) {
+            const alarm = getAlarmById(alarmId);
+            if (!alarm) return;
+
+            activeAlarmId = alarm.id;
+            renderDetailModalContent(alarm);
+            document.getElementById('detailModal').classList.add('show');
+            document.body.classList.add('drawer-open');
+        }
+
+        // 关闭详情模态框
+        function closeDetailModal() {
+            const detailModal = document.getElementById('detailModal');
+            const activeVideo = detailModal.querySelector('video');
+            if (activeVideo) {
+                activeVideo.pause();
+            }
+            detailModal.classList.remove('show');
+            document.body.classList.remove('drawer-open');
+            activeAlarmId = null;
+        }
+
+        // 点击模态框外部关闭
+        document.getElementById('detailModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDetailModal();
+            }
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeDetailModal();
+            }
+        });
+
+        // 切换选择状态
+        function toggleSelection(event, alarmId) {
+            event.stopPropagation(); // 阻止事件冒泡到卡片
+            const card = document.getElementById(`alarm-${alarmId}`);
+            
+            if (selectedAlarms.has(alarmId)) {
+                selectedAlarms.delete(alarmId);
+                card.classList.remove('selected');
+            } else {
+                selectedAlarms.add(alarmId);
+                card.classList.add('selected');
+            }
+            
+            updateSelectedCount();
+        }
+
+        // 更新选中计数
+        function updateSelectedCount() {
+            const count = selectedAlarms.size;
+            document.getElementById('selectedCount').textContent = count;
+            document.getElementById('batchDeleteBtn').style.display = count > 0 ? 'inline-flex' : 'none';
+        }
+
+        // 删除单个告警
+        function deleteSingleAlarm(event, alarmId) {
+            event.stopPropagation(); // 阻止事件冒泡到卡片
+            
+            if (!confirm('确定要删除这条告警记录吗？')) {
+                return;
+            }
+
+            axios.delete(`/api/alarms/${alarmId}`)
+                .then(response => {
+                    if (response.data.status === 'success') {
+                        // 从选中集合中移除
+                        selectedAlarms.delete(alarmId);
+                        // 重新加载告警列表
+                        loadAlarms(false);
+                    } else {
+                        alert('删除失败：' + (response.data.message || '未知错误'));
+                    }
+                })
+                .catch(error => {
+                    console.error('删除失败:', error);
+                    alert('删除失败，请重试');
+                });
+        }
+
+        // 批量删除告警
+        function batchDelete() {
+            if (selectedAlarms.size === 0) {
+                alert('请先选择要删除的告警');
+                return;
+            }
+
+            if (!confirm(`确定要删除选中的 ${selectedAlarms.size} 条告警记录吗？`)) {
+                return;
+            }
+
+            const idsToDelete = Array.from(selectedAlarms);
+
+            axios.post('/api/alarms/batch-delete', { ids: idsToDelete })
+                .then(response => {
+                    if (response.data.status === 'success') {
+                        // 清空选中集合
+                        selectedAlarms.clear();
+                        // 重新加载告警列表
+                        loadAlarms(false);
+                        alert('批量删除成功');
+                    } else {
+                        alert('删除失败：' + (response.data.message || '未知错误'));
+                    }
+                })
+                .catch(error => {
+                    console.error('批量删除失败:', error);
+                    alert('批量删除失败，请重试');
+                });
+        }
+
+    </script>
+</body>
+
+</html>
